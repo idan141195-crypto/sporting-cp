@@ -250,26 +250,12 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFilesLoaded, isCol
         {/* DONE */}
         {uploadState === 'done' && (
           <>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">✅</span>
-              <p className="text-success-green font-display font-black uppercase tracking-widest text-sm">
-                {loadedNames.length > 1 ? `${loadedNames.length} Files Loaded` : 'Data Loaded'}
-              </p>
-            </div>
-            {/* File name chips */}
-            <div className="flex flex-wrap justify-center gap-1.5 max-w-sm">
-              {loadedNames.map((name, i) => (
-                <span
-                  key={name}
-                  className="flex items-center gap-1 px-2 py-0.5 bg-card-dark border border-success-green/30 rounded text-[10px] font-mono text-success-green"
-                >
-                  <span className="text-text-secondary">{i + 1}.</span>
-                  <span className="max-w-[160px] truncate" title={name}>{name}</span>
-                </span>
-              ))}
-            </div>
+            <div className="text-4xl">✅</div>
+            <p className="text-success-green font-display font-black uppercase tracking-widest text-sm">
+              {loadedNames.length > 1 ? `${loadedNames.length} Files Loaded` : 'Data Loaded'}
+            </p>
             <p className="text-text-secondary text-[10px]">
-              {formatBytes(totalSize)} — Ready for analysis
+              {formatBytes(totalSize)} · {loadedNames.length} file{loadedNames.length > 1 ? 's' : ''} — Ready for analysis
             </p>
             <div className="flex items-center gap-1 px-3 py-1 bg-success-green/10 border border-success-green/30 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-success-green" />

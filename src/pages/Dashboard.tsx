@@ -206,32 +206,46 @@ const Dashboard: React.FC = () => {
   const [isChatOpen, setIsChatOpen]     = useState(false);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [secondFile, setSecondFile]     = useState<UploadedFile | null>(null);
-  const [allFileNames, setAllFileNames] = useState<string[]>([]);
+  const [allFiles, setAllFiles]         = useState<UploadedFile[]>([]);
+  const [uploaderKey, setUploaderKey]   = useState(0);
   const [liveReport, setLiveReport]     = useState<DiagnosisReport | null>(null);
   const [isInsightsOpen, setIsInsightsOpen] = useState(false);
   const [budgetPlayers, setBudgetPlayers]   = useState<BudgetPlayer[]>(MOCK_BUDGET_PLAYERS);
 
-  const handleFilesLoaded = (files: UploadedFile[]) => {
+  const applyFiles = (files: UploadedFile[]) => {
     setUploadedFile(files[0] ?? null);
     setSecondFile(files[1] ?? null);
-    setAllFileNames(files.map((f) => f.name));
+    setAllFiles(files);
 
-    // Sort each file into campaign or funnel bucket, then merge within each type
     const campaignTexts: string[] = [];
     const funnelTexts: string[] = [];
     for (const f of files) {
       const rows = parseCSV(f.content);
       const type = detectFileType(rows);
       if (type === 'funnel') funnelTexts.push(f.content);
-      else campaignTexts.push(f.content); // campaigns + unknown default to campaign slot
+      else campaignTexts.push(f.content);
     }
 
     const mergedCampaigns = mergeCSVs(campaignTexts) || undefined;
     const mergedFunnel    = mergeCSVs(funnelTexts)    || undefined;
-
     const report = runDiagnosis(mergedCampaigns, mergedFunnel);
     setLiveReport(report);
     if (report.campaigns.length > 0) setBudgetPlayers(reportToBudgetPlayers(report));
+  };
+
+  const handleFilesLoaded = (files: UploadedFile[]) => applyFiles(files);
+
+  const removeFile = (name: string) => {
+    const remaining = allFiles.filter((f) => f.name !== name);
+    if (remaining.length === 0) {
+      setAllFiles([]);
+      setUploadedFile(null);
+      setSecondFile(null);
+      setLiveReport(null);
+      setUploaderKey((k) => k + 1); // reset FileUploader to idle
+      return;
+    }
+    applyFiles(remaining);
   };
 
   const hasLive = liveReport !== null;
@@ -307,21 +321,42 @@ const Dashboard: React.FC = () => {
           {/* Data Ingestion Hub */}
           <div className="mb-6">
             <FileUploader
+              key={uploaderKey}
               onFilesLoaded={handleFilesLoaded}
               onInsightsClick={() => setIsInsightsOpen(true)}
               hasReport={hasInsightsData}
             />
-            {/* Loaded file names strip */}
-            {allFileNames.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {allFileNames.map((name, i) => (
-                  <span
-                    key={name}
-                    className="flex items-center gap-1 px-2 py-0.5 bg-card-dark border border-border-dark rounded text-[10px] font-mono text-text-secondary"
-                  >
-                    <span className="text-electric-yellow">{i + 1}</span>
-                    <span className="max-w-[180px] truncate text-white" title={name}>{name}</span>
+            {/* Loaded files — managed list with individual remove */}
+            {allFiles.length > 0 && (
+              <div className="mt-2 bg-card-dark border border-border-dark rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-border-dark">
+                  <span className="text-text-secondary text-[10px] font-mono uppercase tracking-widest">
+                    {allFiles.length} file{allFiles.length > 1 ? 's' : ''} loaded
                   </span>
+                  <button
+                    onClick={() => { setAllFiles([]); setUploadedFile(null); setSecondFile(null); setLiveReport(null); setUploaderKey((k) => k + 1); }}
+                    className="text-[10px] text-text-secondary hover:text-danger-red uppercase tracking-wider font-bold transition-colors"
+                  >
+                    Clear all
+                  </button>
+                </div>
+                {allFiles.map((f, i) => (
+                  <div key={f.name} className="flex items-center justify-between px-3 py-2 border-b border-border-dark last:border-b-0 hover:bg-pitch-dark transition-colors">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-electric-yellow text-[10px] font-mono shrink-0">{i + 1}</span>
+                      <span className="text-white text-xs font-mono truncate" title={f.name}>{f.name}</span>
+                      <span className="text-text-secondary text-[10px] shrink-0">
+                        {f.size < 1024 ? `${f.size}B` : f.size < 1048576 ? `${(f.size / 1024).toFixed(1)}KB` : `${(f.size / 1048576).toFixed(1)}MB`}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => removeFile(f.name)}
+                      className="shrink-0 ml-3 w-5 h-5 flex items-center justify-center text-text-secondary hover:text-danger-red hover:bg-danger-red/10 rounded transition-all text-xs"
+                      title="Remove file"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
