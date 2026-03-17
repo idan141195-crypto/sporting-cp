@@ -21,7 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-3 shrink-0">
           <div className="relative">
             <img
-              src="/sporting-cp/sporting-cp-logo.png"
+              src="/bodo-glimt/sporting-cp-logo.png"
               alt="Bodø/Glimt"
               className="w-11 h-11 rounded-full border-2 border-electric-yellow shadow-yellow-sm"
             />
