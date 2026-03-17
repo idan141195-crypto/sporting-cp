@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { PlayerCard } from '../components/PlayerCard';
 import type { Campaign } from '../components/PlayerCard';
 import { LeakingPipeFunnel } from '../components/LeakingPipeFunnel';
@@ -235,14 +235,13 @@ const Dashboard: React.FC = () => {
     if (report.campaigns.length > 0) setBudgetPlayers(reportToBudgetPlayers(report));
   };
 
-  const handleFilesLoaded = useCallback((files: UploadedFile[]) => {
-    // Read from ref — always current, no stale closure risk
+  const handleFilesLoaded = (files: UploadedFile[]) => {
     const merged = [...allFilesRef.current];
     for (const f of files) {
       if (!merged.find((x) => x.name === f.name)) merged.push(f);
     }
     applyFiles(merged.slice(0, 10));
-  }, []);
+  };
 
   const removeFile = (name: string) => {
     const remaining = allFiles.filter((f) => f.name !== name);
