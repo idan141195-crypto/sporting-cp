@@ -75,7 +75,7 @@ export interface DiagnosticFlag {
 
 // ─── CSV Parser ───────────────────────────────────────────────────────────────
 
-function parseCSV(text: string): Record<string, string>[] {
+export function parseCSV(text: string): Record<string, string>[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
 

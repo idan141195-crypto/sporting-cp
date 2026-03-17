@@ -13,7 +13,7 @@ import type { UploadedFile } from '../components/FileUploader';
 import { AICoachChat } from '../components/AICoachChat';
 import { InsightsPanel } from '../components/InsightsPanel';
 import { LiveInsightsTiles } from '../components/LiveInsightsTiles';
-import { runDiagnosis } from '../lib/scale-engine';
+import { runDiagnosis, parseCSV, detectFileType } from '../lib/scale-engine';
 import type { DiagnosisReport } from '../lib/scale-engine';
 
 // ─── Mock fallback data (shown when no file is uploaded) ──────────────────────
@@ -91,6 +91,16 @@ const MOCK_INJURIES: TechnicalInjury[] = [
     timestamp: '12:58',
   },
 ];
+
+// ─── CSV merge helper ─────────────────────────────────────────────────────────
+
+function mergeCSVs(csvTexts: string[]): string {
+  if (csvTexts.length === 0) return '';
+  if (csvTexts.length === 1) return csvTexts[0];
+  const header = csvTexts[0].trim().split(/\r?\n/)[0];
+  const rows = csvTexts.map((t) => t.trim().split(/\r?\n/).slice(1)).flat();
+  return [header, ...rows].join('\n');
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -201,11 +211,23 @@ const Dashboard: React.FC = () => {
   const [budgetPlayers, setBudgetPlayers]   = useState<BudgetPlayer[]>(MOCK_BUDGET_PLAYERS);
 
   const handleFilesLoaded = (files: UploadedFile[]) => {
-    const file1 = files[0];
-    const file2 = files[1] ?? null;
-    setUploadedFile(file1);
-    setSecondFile(file2);
-    const report = runDiagnosis(file1.content, file2?.content);
+    setUploadedFile(files[0] ?? null);
+    setSecondFile(files[1] ?? null);
+
+    // Sort each file into campaign or funnel bucket, then merge within each type
+    const campaignTexts: string[] = [];
+    const funnelTexts: string[] = [];
+    for (const f of files) {
+      const rows = parseCSV(f.content);
+      const type = detectFileType(rows);
+      if (type === 'funnel') funnelTexts.push(f.content);
+      else campaignTexts.push(f.content); // campaigns + unknown default to campaign slot
+    }
+
+    const mergedCampaigns = mergeCSVs(campaignTexts) || undefined;
+    const mergedFunnel    = mergeCSVs(funnelTexts)    || undefined;
+
+    const report = runDiagnosis(mergedCampaigns, mergedFunnel);
     setLiveReport(report);
     if (report.campaigns.length > 0) setBudgetPlayers(reportToBudgetPlayers(report));
   };
@@ -257,7 +279,7 @@ const Dashboard: React.FC = () => {
 
       <Header
         criticalCount={criticalCount}
-        uploadedFileName={uploadedFile && secondFile ? `${uploadedFile.name} + ${secondFile.name}` : uploadedFile?.name}
+        uploadedFileName={uploadedFile?.name}
         onToggleChat={() => setIsChatOpen((o) => !o)}
         isChatOpen={isChatOpen}
       />

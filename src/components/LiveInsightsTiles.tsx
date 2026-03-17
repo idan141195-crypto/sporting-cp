@@ -57,6 +57,40 @@ Return ONLY a JSON array — no markdown, no explanation, no extra text:
   {"type":"winner|leak|geo|product|creative|audience|funnel|cross|budget|trend|alert","title":"Max 5 words","metric":"Label: exact value","context":"One sharp action sentence.","action":"SCALE|PAUSE|INVESTIGATE|OPTIMIZE","color":"green|red|orange|yellow","emoji":"single emoji"}
 ]`;
 
+// Extract complete tile objects from a partial JSON stream
+function extractTilesFromStream(text: string): InsightTile[] {
+  const tiles: InsightTile[] = [];
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  let objStart = -1;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (inString) {
+      if (ch === '\\') escape = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') { inString = true; continue; }
+    if (ch === '{') {
+      if (depth === 0) objStart = i;
+      depth++;
+    } else if (ch === '}') {
+      depth--;
+      if (depth === 0 && objStart >= 0) {
+        try {
+          const obj = JSON.parse(text.slice(objStart, i + 1));
+          if (obj.title && obj.metric) tiles.push(obj as InsightTile);
+        } catch { /* partial object, skip */ }
+        objStart = -1;
+      }
+    }
+  }
+  return tiles;
+}
+
 const colorConfig = {
   green:  { border: 'border-success-green/30',      bg: 'bg-success-green/5',   metric: 'text-success-green',   badge: 'bg-success-green/15 text-success-green border-success-green/30' },
   red:    { border: 'border-danger-red/30',          bg: 'bg-danger-red/5',      metric: 'text-danger-red',      badge: 'bg-danger-red/15 text-danger-red border-danger-red/30' },
@@ -80,17 +114,41 @@ const SkeletonTile: React.FC = () => (
   </div>
 );
 
+const TileCard: React.FC<{ tile: InsightTile }> = ({ tile }) => {
+  const cfg = colorConfig[tile.color as keyof typeof colorConfig] ?? colorConfig.orange;
+  return (
+    <div className={`border ${cfg.border} ${cfg.bg} rounded-xl p-4 flex flex-col gap-2.5 hover:scale-[1.01] transition-transform duration-200`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-base leading-none">{tile.emoji}</span>
+          <p className="text-white font-display font-bold uppercase tracking-wide text-[11px] leading-tight">
+            {tile.title}
+          </p>
+        </div>
+        <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-widest whitespace-nowrap ${cfg.badge}`}>
+          {actionLabel[tile.action] ?? tile.action}
+        </span>
+      </div>
+      <p className={`font-display font-black text-xl leading-tight ${cfg.metric}`}>
+        {tile.metric}
+      </p>
+      <p className="text-text-secondary text-xs leading-relaxed border-t border-border-dark/50 pt-2">
+        {tile.context}
+      </p>
+    </div>
+  );
+};
+
 export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
   report,
   fileNames,
   secondFileContent,
 }) => {
   const [tiles, setTiles]         = useState<InsightTile[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError]         = useState('');
   const lastKey = useRef('');
 
-  // Build a compact key to detect when data actually changes
   const reportKey = `${report.totalRevenue}|${report.campaigns.length}|${report.funnelSteps.length}|${report.flags.length}|${fileNames.join(',')}`;
 
   useEffect(() => {
@@ -101,14 +159,12 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
   }, [reportKey]);
 
   const generateTiles = async () => {
-    setIsLoading(true);
+    setIsStreaming(true);
     setTiles([]);
     setError('');
 
-    // Full data payload — all dimensions
     const allCampaigns = [...report.campaigns].sort((a, b) => b.revenue - a.revenue);
 
-    // Platform aggregation
     const byPlatform: Record<string, { spend: number; revenue: number; conversions: number; count: number }> = {};
     for (const c of report.campaigns) {
       const k = c.platform || 'Unknown';
@@ -124,7 +180,6 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
       conversions: v.conversions, campaigns: v.count,
     })).sort((a, b) => b.roas - a.roas);
 
-    // Audience type aggregation
     const byAudience: Record<string, { spend: number; revenue: number; count: number }> = {};
     for (const c of report.campaigns) {
       const k = c.audienceType || 'Unknown';
@@ -145,43 +200,24 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
         criticalCount: report.criticalCampaigns.length,
         scalerCount: report.campaigns.filter((c) => c.status === 'SCALE').length,
       },
-      // All campaigns — sorted by revenue
       campaigns: allCampaigns.map((c) => ({
-        name: c.name,
-        platform: c.platform,
-        country: c.country,
-        spend: c.spend,
-        revenue: c.revenue,
-        roas: +c.roas.toFixed(2),
-        ctr: +c.ctr.toFixed(2),
-        cr: +c.conversionRate.toFixed(2),
-        conversions: c.conversions,
-        grossProfit: +c.grossProfit.toFixed(0),
-        roi: +c.roi.toFixed(1),
-        status: c.status,
-        audience: c.audienceType,
-        format: c.format,
-        placement: c.placement,
+        name: c.name, platform: c.platform, country: c.country,
+        spend: c.spend, revenue: c.revenue, roas: +c.roas.toFixed(2),
+        ctr: +c.ctr.toFixed(2), cr: +c.conversionRate.toFixed(2),
+        conversions: c.conversions, grossProfit: +c.grossProfit.toFixed(0),
+        roi: +c.roi.toFixed(1), status: c.status,
+        audience: c.audienceType, format: c.format, placement: c.placement,
       })),
-      // Platform breakdown
       platformBreakdown: platformStats,
-      // All geo stats — every country
       geoBreakdown: report.geoStats.map((g) => ({
-        country: g.country,
-        roas: +g.roas.toFixed(2),
-        revenue: g.revenue,
-        spend: g.spend,
-        aov: +g.aov.toFixed(0),
-        cr: +g.cr.toFixed(2),
-        flag: g.flag,
+        country: g.country, roas: +g.roas.toFixed(2), revenue: g.revenue,
+        spend: g.spend, aov: +g.aov.toFixed(0), cr: +g.cr.toFixed(2), flag: g.flag,
       })),
-      // Audience type comparison
       audienceBreakdown: Object.entries(byAudience).map(([type, v]) => ({
         type, spend: v.spend, revenue: v.revenue,
         roas: v.spend > 0 ? +(v.revenue / v.spend).toFixed(2) : 0,
         campaigns: v.count,
       })),
-      // Top/bottom performers
       topScorer: report.topScorer ? {
         name: report.topScorer.name, roas: +report.topScorer.roas.toFixed(2),
         platform: report.topScorer.platform, country: report.topScorer.country,
@@ -191,21 +227,20 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
         name: c.name, spend: c.spend, roas: +c.roas.toFixed(2),
         platform: c.platform, country: c.country,
       })),
-      // Funnel
       funnel: report.funnelSteps.map((s) => ({
         step: s.label, users: s.users, dropPct: +s.dropPct.toFixed(1), alert: s.alertLevel,
       })),
       biggestLeak: report.biggestLeak,
       checkoutFriction: report.checkoutFriction,
-      // Diagnostic flags
       flags: report.flags.map((f) => ({
         type: f.type, severity: f.severity, message: f.message, fix: f.recommendation,
       })),
     };
 
     try {
-      // Use non-streaming call for structured JSON — more reliable
-      const response = await client.messages.create({
+      let accumulated = '';
+
+      const stream = client.messages.stream({
         model: 'claude-sonnet-4-6',
         max_tokens: 2400,
         system: SYSTEM_PROMPT,
@@ -215,41 +250,55 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
         }],
       });
 
-      const text = response.content[0].type === 'text' ? response.content[0].text : '';
+      for await (const event of stream) {
+        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+          accumulated += event.delta.text;
+          const partial = extractTilesFromStream(accumulated);
+          if (partial.length > 0) setTiles(partial);
+        }
+      }
 
-      // Extract JSON array from response
-      const arrMatch = text.match(/\[[\s\S]*\]/);
-      if (!arrMatch) throw new Error('No JSON array in response');
-
-      const parsed: InsightTile[] = JSON.parse(arrMatch[0]);
-      if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('Empty tiles array');
-
-      setTiles(parsed);
+      // Final parse for clean complete array
+      const arrMatch = accumulated.match(/\[[\s\S]*\]/);
+      if (arrMatch) {
+        try {
+          const parsed: InsightTile[] = JSON.parse(arrMatch[0]);
+          if (Array.isArray(parsed) && parsed.length > 0) setTiles(parsed);
+        } catch { /* keep progressive results */ }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
-      setIsLoading(false);
+      setIsStreaming(false);
     }
   };
 
-  if (!isLoading && tiles.length === 0 && !error) return null;
+  const TOTAL_TILES = 10;
+  const skeletonCount = isStreaming ? Math.max(0, TOTAL_TILES - tiles.length) : 0;
+
+  if (!isStreaming && tiles.length === 0 && !error) return null;
 
   return (
     <div className="mb-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 px-0.5">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-electric-yellow animate-pulse" />
+          <span className={`w-2 h-2 rounded-full bg-electric-yellow ${isStreaming ? 'animate-pulse' : ''}`} />
           <h2 className="text-white font-display font-black uppercase tracking-widest text-xs">
             Scale Live Insights
           </h2>
-          {!isLoading && tiles.length > 0 && (
+          {isStreaming && tiles.length > 0 && (
+            <span className="text-text-secondary text-[10px] font-mono hidden sm:inline">
+              — generating {tiles.length}/{TOTAL_TILES}…
+            </span>
+          )}
+          {!isStreaming && tiles.length > 0 && (
             <span className="text-text-secondary text-[10px] font-mono hidden sm:inline">
               — {fileNames.join(' + ')}
             </span>
           )}
         </div>
-        {!isLoading && (
+        {!isStreaming && (
           <button
             onClick={generateTiles}
             className="text-[10px] text-text-secondary hover:text-electric-yellow uppercase tracking-wider font-bold transition-colors"
@@ -260,11 +309,7 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
       </div>
 
       {/* Content */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => <SkeletonTile key={i} />)}
-        </div>
-      ) : error ? (
+      {error ? (
         <div className="flex items-center justify-between bg-card-dark border border-border-dark rounded-xl p-4">
           <p className="text-danger-red text-xs font-mono">{error}</p>
           <button
@@ -276,35 +321,8 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {tiles.map((tile, i) => {
-            const cfg = colorConfig[tile.color as keyof typeof colorConfig] ?? colorConfig.orange;
-            return (
-              <div
-                key={i}
-                className={`border ${cfg.border} ${cfg.bg} rounded-xl p-4 flex flex-col gap-2.5 hover:scale-[1.01] transition-transform duration-200`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base leading-none">{tile.emoji}</span>
-                    <p className="text-white font-display font-bold uppercase tracking-wide text-[11px] leading-tight">
-                      {tile.title}
-                    </p>
-                  </div>
-                  <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-widest whitespace-nowrap ${cfg.badge}`}>
-                    {actionLabel[tile.action] ?? tile.action}
-                  </span>
-                </div>
-
-                <p className={`font-display font-black text-xl leading-tight ${cfg.metric}`}>
-                  {tile.metric}
-                </p>
-
-                <p className="text-text-secondary text-xs leading-relaxed border-t border-border-dark/50 pt-2">
-                  {tile.context}
-                </p>
-              </div>
-            );
-          })}
+          {tiles.map((tile, i) => <TileCard key={i} tile={tile} />)}
+          {Array.from({ length: skeletonCount }).map((_, i) => <SkeletonTile key={`sk-${i}`} />)}
         </div>
       )}
     </div>

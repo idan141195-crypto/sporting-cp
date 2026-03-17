@@ -78,7 +78,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFilesLoaded, isCol
   const inputRef = useRef<HTMLInputElement>(null);
 
   const processFiles = useCallback(async (rawFiles: File[]) => {
-    const files = rawFiles.slice(0, 2);
+    const files = rawFiles.slice(0, 10);
     const invalid = files.find((f) => !/\.(csv|xlsx|xls|json|txt)$/i.test(f.name));
     if (invalid) {
       setError('Unsupported file type. Use CSV, XLSX, or JSON.');
@@ -166,7 +166,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFilesLoaded, isCol
             <h3 className="text-white font-display font-bold uppercase tracking-widest text-xs">
               Data Ingestion Hub
             </h3>
-            <p className="text-text-secondary text-[10px] mt-0.5">CSV · XLSX · JSON — up to 2 files</p>
+            <p className="text-text-secondary text-[10px] mt-0.5">CSV · XLSX · JSON — up to 10 files</p>
           </div>
         </div>
         {uploadState === 'done' && (
@@ -204,10 +204,10 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFilesLoaded, isCol
             <div className="text-4xl">⬆️</div>
             <div>
               <p className="text-white font-bold text-sm uppercase tracking-wider">
-                Drop 1 or 2 Files Here
+                Drop Up to 10 Files Here
               </p>
               <p className="text-text-secondary text-xs mt-1">
-                or click to browse — Campaigns + Funnel CSV
+                or click to browse — CSV, XLSX, JSON
               </p>
             </div>
             <div className="flex gap-2 mt-1">
@@ -253,7 +253,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFilesLoaded, isCol
             <div className="text-4xl">✅</div>
             <div>
               <p className="text-success-green font-display font-black uppercase tracking-widest text-sm">
-                {loadedNames.length === 2 ? '2 Files Loaded' : 'Data Loaded'}
+                {loadedNames.length > 1 ? `${loadedNames.length} Files Loaded` : 'Data Loaded'}
               </p>
               {loadedNames.map((name) => (
                 <p key={name} className="text-white font-bold text-xs mt-1 truncate max-w-[220px]">{name}</p>
@@ -265,7 +265,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFilesLoaded, isCol
             <div className="flex items-center gap-1 px-3 py-1 bg-success-green/10 border border-success-green/30 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-success-green" />
               <span className="text-success-green text-[10px] font-bold uppercase tracking-wider">
-                Ask the AI Coach about {loadedNames.length === 2 ? 'these files' : 'this file'}
+                Ask the AI Coach about {loadedNames.length > 1 ? 'these files' : 'this file'}
               </span>
             </div>
           </>
