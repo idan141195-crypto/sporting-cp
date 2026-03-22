@@ -711,9 +711,9 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#06060a] flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        <div className="bg-[#0c0d12] border border-white/[0.06] rounded-2xl p-8 shadow-2xl">
+    <div className="h-screen overflow-hidden bg-[#06060a] flex items-center justify-center p-4">
+      <div className="w-full max-w-lg h-full flex flex-col justify-center">
+        <div className="bg-[#0c0d12] border border-white/[0.06] rounded-2xl p-8 shadow-2xl overflow-y-auto max-h-full">
           {step === 0 && <WelcomeStep onStart={() => setStep(1)} onSkip={handleSkip} />}
           {step === 1 && <SetupStep onComplete={onComplete} />}
         </div>
