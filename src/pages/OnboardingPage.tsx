@@ -151,8 +151,9 @@ interface BrandStepState {
   error:     string;
 }
 
-function BrandStep({ onContinue }: {
+function BrandStep({ onContinue, onSkip }: {
   onContinue: (cfg: BrandConfig, name: string, industry: string, tone: string, keywords: string[]) => void;
+  onSkip:     () => void;
 }) {
   const [s, setS] = useState<BrandStepState>({
     url: '', detecting: false, deepScan: false,
@@ -304,6 +305,13 @@ function BrandStep({ onContinue }: {
         className="w-full py-3.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-30 disabled:cursor-not-allowed text-black font-black rounded-xl flex items-center justify-center gap-2 transition-colors"
       >
         Continue <ChevronRight size={16} />
+      </button>
+
+      <button
+        onClick={onSkip}
+        className="w-full py-2 text-white/25 hover:text-white/50 text-xs flex items-center justify-center gap-1.5 transition-colors"
+      >
+        <SkipForward size={12} /> Skip — I'll set up my brand later
       </button>
     </div>
   );
@@ -570,7 +578,7 @@ export default function OnboardingPage({ onComplete }: OnboardingPageProps) {
 
         <div className="bg-[#0c0d12] border border-white/[0.06] rounded-2xl p-8 shadow-2xl">
           {step === 0 && <WelcomeStep onStart={() => setStep(1)} />}
-          {step === 1 && <BrandStep onContinue={handleBrandContinue} />}
+          {step === 1 && <BrandStep onContinue={handleBrandContinue} onSkip={() => setStep(2)} />}
           {step === 2 && <MetaStep onContinue={handleMetaContinue} onSkip={handleMetaSkip} />}
           {step === 3 && (
             <DoneStep

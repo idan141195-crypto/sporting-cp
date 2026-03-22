@@ -201,6 +201,139 @@ const StatBox: React.FC<{
   </div>
 );
 
+// ─── Agent Carousel ────────────────────────────────────────────────────────────
+
+const AGENT_CARDS = [
+  {
+    id:           'analyst'   as const,
+    Icon:         Activity,
+    name:         'Analyst',
+    accent:       '#06b6d4',
+    tagline:      'Campaign Intelligence',
+    description:  'Continuously monitors ROAS, spend, and creative performance across all your ad sets. Surfaces scaling opportunities and flags budget waste before it compounds.',
+    capabilities: ['ROAS & CPA real-time tracking', 'Creative fatigue detection', 'Auto Scale / Hold / Pause logic'],
+  },
+  {
+    id:           'campaigner' as const,
+    Icon:         TrendingUp,
+    name:         'Campaigner',
+    accent:       'var(--brand-primary)',
+    tagline:      'AI Ad Builder',
+    description:  'Launch full Meta campaigns through conversation. Describe your audience and goal — the agent handles structure, targeting, and budgets via the live Meta Ads API.',
+    capabilities: ['Natural language campaign setup', 'Meta Ads API live connection', 'Ad set & budget management'],
+  },
+  {
+    id:           'creative' as const,
+    Icon:         Sparkles,
+    name:         'AI Creative',
+    accent:       '#a78bfa',
+    tagline:      'Image · Video · Copy',
+    description:  'Generate scroll-stopping ad creatives in seconds — product images, cinematic video clips, and high-converting ad copy, all powered by AI.',
+    capabilities: ['Flux Schnell image generation', 'Luma Ray 2 video generation', 'Claude-powered ad copy'],
+  },
+] as const;
+
+type AgentCarouselId = (typeof AGENT_CARDS)[number]['id'];
+
+const AgentCarousel: React.FC<{ onOpen: (id: AgentCarouselId) => void }> = ({ onOpen }) => {
+  const [hovered, setHovered] = React.useState<number | null>(null);
+
+  return (
+    <section>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        {AGENT_CARDS.map((card, i) => {
+          const { Icon, name, accent, tagline, description, capabilities } = card;
+          const isHovered = hovered === i;
+          return (
+            <div
+              key={card.id}
+              onClick={() => onOpen(card.id)}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+              style={{
+                background:    'var(--brand-surface-card)',
+                border:        `1px solid ${isHovered ? `color-mix(in srgb, ${accent} 45%, transparent)` : 'var(--brand-muted)'}`,
+                borderRadius:  10,
+                padding:       '20px',
+                cursor:        'pointer',
+                transition:    'border-color 0.2s, box-shadow 0.2s',
+                position:      'relative',
+                overflow:      'hidden',
+                boxShadow:     isHovered ? `0 0 0 1px color-mix(in srgb, ${accent} 15%, transparent), 0 4px 20px rgba(0,0,0,0.3)` : 'none',
+              }}
+            >
+              {/* Top accent line */}
+              <div style={{
+                position:   'absolute', top: 0, left: 0, right: 0, height: 2,
+                background: isHovered ? `linear-gradient(90deg, ${accent}, transparent)` : 'transparent',
+                transition: 'background 0.2s',
+              }} />
+
+              {/* Icon + Name */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 8,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: `color-mix(in srgb, ${accent} 12%, transparent)`,
+                  border:     `1px solid color-mix(in srgb, ${accent} 25%, transparent)`,
+                  flexShrink: 0,
+                }}>
+                  <Icon size={18} color={accent} />
+                </div>
+                <div>
+                  <div style={{ color: '#fff', fontWeight: 800, fontSize: 14, lineHeight: 1 }}>{name}</div>
+                  <div style={{ color: accent, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 3 }}>{tagline}</div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <p style={{ color: '#9ca3af', fontSize: 12, lineHeight: 1.6, marginBottom: 14 }}>{description}</p>
+
+              {/* Capabilities */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
+                {capabilities.map(c => (
+                  <div key={c} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <div style={{ width: 4, height: 4, borderRadius: '50%', background: accent, flexShrink: 0, opacity: 0.7 }} />
+                    <span style={{ color: '#6b7280', fontSize: 11 }}>{c}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <div style={{
+                width: '100%', padding: '8px 14px', borderRadius: 6,
+                border:      `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
+                background:  `color-mix(in srgb, ${accent} ${isHovered ? '12%' : '6%'}, transparent)`,
+                color:       accent, fontSize: 11, fontWeight: 700,
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+                textAlign:   'center', transition: 'background 0.2s',
+              }}>
+                Open {name} →
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Dots */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginTop: 12 }}>
+        {AGENT_CARDS.map((card, i) => (
+          <div
+            key={i}
+            style={{
+              width:        hovered === i ? 18 : 5,
+              height:       5,
+              borderRadius: 3,
+              background:   hovered === i ? card.accent : 'rgba(255,255,255,0.08)',
+              transition:   'all 0.25s',
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+};
+
 // ─── Side panel (shared shell) ─────────────────────────────────────────────────
 
 const SidePanel: React.FC<{
@@ -720,6 +853,23 @@ const DashboardInner: React.FC = () => {
         style={settingsOpen || campaignPanelOpen ? { marginRight: '500px' } : {}}
       >
 
+
+        {/* ── Agent Carousel ────────────────────────────────────────────────── */}
+        <AgentCarousel onOpen={(id) => {
+          setOrchestratorOpen(false);
+          setSettingsOpen(false);
+          if (id === 'analyst') {
+            setAnalystChatOpen(true);
+            setCampaignPanelOpen(false);
+          } else if (id === 'campaigner') {
+            setCampaignPanelOpen(true);
+            setAnalystChatOpen(false);
+          } else {
+            setAnalystChatOpen(false);
+            setCampaignPanelOpen(false);
+            creativeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }} />
 
         {/* ── Stat boxes ────────────────────────────────────────────────────── */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
