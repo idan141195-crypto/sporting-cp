@@ -77,7 +77,7 @@ function WelcomeStep({ onStart, onSkip }: { onStart: () => void; onSkip: () => v
       {/* Logo — same as Dashboard home page hero */}
       <div className="flex items-center justify-center">
         <span style={{
-          fontSize: 64, fontWeight: 800, letterSpacing: '-0.03em',
+          fontSize: 64, fontWeight: 700, letterSpacing: '-0.03em',
           fontFamily: 'var(--font-display)', lineHeight: 1, color: '#fff',
         }}>
           Scale<span style={{ color: 'var(--brand-primary)' }}>.ai</span>
