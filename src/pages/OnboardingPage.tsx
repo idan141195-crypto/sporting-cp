@@ -124,7 +124,6 @@ function WelcomeStep({ onStart, onSkip }: { onStart: () => void; onSkip: () => v
         <SkipForward size={12} /> Skip setup — go straight to dashboard
       </button>
 
-      <FileAnalystSection />
     </div>
   );
 }
@@ -615,7 +614,9 @@ function SetupStep({ onComplete }: { onComplete: () => void }) {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-black text-white">Quick Setup</h2>
-        <span className="text-[10px] text-white/25 uppercase tracking-widest font-semibold">All optional</span>
+        <button onClick={handleDone} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 bg-white/[0.03] text-white/50 hover:text-white/80 hover:border-white/20 text-[11px] font-semibold transition-colors">
+          <SkipForward size={11} /> Skip all → Dashboard
+        </button>
       </div>
 
       {/* ── Brand section ── */}
@@ -641,6 +642,9 @@ function SetupStep({ onComplete }: { onComplete: () => void }) {
         {brandDone && <p className="text-xs text-green-400/70">Brand "{brandName}" detected and applied ✓</p>}
         {brandError && <p className="text-xs text-red-400">{brandError}</p>}
       </div>
+
+      {/* ── File Analyst ── */}
+      <FileAnalystSection />
 
       {/* ── Divider ── */}
       <div className="flex items-center gap-3">
