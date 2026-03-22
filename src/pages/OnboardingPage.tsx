@@ -4,7 +4,7 @@ import {
   Palette, SkipForward, AlertCircle,
   Upload, FileText, Activity,
 } from 'lucide-react';
-import { resolveBrand, applyBrand, saveBrand as saveBrandConfig, useBrand } from '../lib/BrandingService';
+import { resolveBrand, applyBrand, saveBrand as saveBrandConfig } from '../lib/BrandingService';
 import { scanBrand, saveBrand as saveBrandProfile } from '../lib/brandContext';
 import { saveUserConfig } from '../lib/userConfig';
 import Anthropic from '@anthropic-ai/sdk';
@@ -72,27 +72,16 @@ async function callClaude(system: string, user: string): Promise<string> {
 // ── Welcome Step ──────────────────────────────────────────────────────────────
 
 function WelcomeStep({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
-  const brand = useBrand();
   return (
     <div className="text-center space-y-8">
-      {/* Logo — matches Dashboard header */}
-      <div className="flex items-center justify-center gap-3">
-        <img
-          src={brand.logoUrl}
-          alt={brand.name}
-          style={{
-            width: 64, height: 64, borderRadius: 16, objectFit: 'contain', flexShrink: 0,
-            background: `${brand.primary}18`,
-            border: `1px solid ${brand.primary}55`,
-            boxShadow: `0 0 28px ${brand.primary}30`,
-          }}
-        />
-        <div className="text-left">
-          <div className="text-3xl font-black text-white tracking-tight leading-none">
-            <span style={{ fontWeight: 900, letterSpacing: '-0.03em' }}>SCALE</span><span style={{ color: brand.primary, fontWeight: 900 }}>AI</span>
-          </div>
-          <div className="text-[10px] tracking-widest uppercase mt-0.5" style={{ color: `${brand.primary}80` }}>Marketing Platform</div>
-        </div>
+      {/* Logo — same as Dashboard home page hero */}
+      <div className="flex items-center justify-center">
+        <span style={{
+          fontSize: 64, fontWeight: 800, letterSpacing: '-0.03em',
+          fontFamily: 'var(--font-display)', lineHeight: 1, color: '#fff',
+        }}>
+          Scale<span style={{ color: 'var(--brand-primary)' }}>.ai</span>
+        </span>
       </div>
 
       <div className="space-y-3">
