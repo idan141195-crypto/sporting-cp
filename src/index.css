@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* ── Brand identity ──────────────────────────────────────────────────────── */
+  --brand-primary:        #FBBF24;
+  --brand-secondary:      #06D6F0;
+  --brand-logo:           url('/bodo-glimt/sporting-cp-logo.png');
+
+  /* ── Semantic palette (overridden by BrandingService on Apply) ──────────── */
+  --brand-surface:        #080808;
+  --brand-surface-card:   #111111;
+  --brand-surface-elv:    #1A1A1A;
+  --brand-muted:          #2A2A2A;
+  --brand-text-secondary: #9A9A9A;
+  --brand-glow:           rgba(251,191,36,0.3);
+  --brand-contrast:       #080808;
+
+  /* ── Layout ─────────────────────────────────────────────────────────────── */
+  --radius-size:          2px;
+
+  /* ── Typography (overridden by BrandingService on Apply) ────────────────── */
+  --font-display: 'Barlow Condensed', Impact, 'Arial Black', sans-serif;
+  --font-body:    'DM Sans', Inter, system-ui, sans-serif;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -9,16 +32,33 @@
 }
 
 body {
-  background-color: #080808;
+  background-color: var(--brand-surface);
   color: #ffffff;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.01em;
+}
+
+/* Replace browser-default Courier monospace with a clean system font */
+.font-mono {
+  font-family: ui-monospace, 'SFMono-Regular', 'SF Mono', Consolas, 'Liberation Mono', monospace;
+  letter-spacing: 0.02em;
 }
 
 #root {
   min-height: 100vh;
   width: 100%;
+}
+
+/* Brand transitions — smooth color switch on Apply */
+*, *::before, *::after {
+  transition-property: color, background-color, border-color, box-shadow, fill, stroke;
+  transition-duration: 400ms;
+  transition-timing-function: ease;
+}
+/* But don't slow down transforms/opacity for existing animations */
+.animate-pulse, .animate-ping, [class*="animate-"] {
+  transition: none;
 }
 
 /* Scrollbar */

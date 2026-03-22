@@ -1,0 +1,4 @@
+Timestamp,Action,Ad Set Name,ROAS,Budget From ($),Budget To ($),Budget Change ($),Reason,Inventory (units),Site Health,Cart Drop-off,Checkout Drop-off
+2026-03-18T10:00:00,SCALE,UK Retargeting,6.20,50.00,57.50,7.50,ROAS > 5.0,42,OK,LOW,LOW
+2026-03-18T10:01:00,PAUSE,FR Prospecting,1.80,,,,ROAS < 3.0,12,OK,LOW,HIGH
+2026-03-18T10:02:00,HOLD,DE Retargeting,4.10,,,,ROAS in range,,,,

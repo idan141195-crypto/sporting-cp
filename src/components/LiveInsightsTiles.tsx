@@ -57,7 +57,8 @@ Return ONLY a JSON array — no markdown, no explanation, no extra text:
   {"type":"winner|leak|geo|product|creative|audience|funnel|cross|budget|trend|alert","title":"Max 5 words","metric":"Label: exact value","context":"One sharp action sentence.","action":"SCALE|PAUSE|INVESTIGATE|OPTIMIZE","color":"green|red|orange|yellow","emoji":"single emoji"}
 ]`;
 
-// Extract complete tile objects from a partial JSON stream
+// ─── Extract complete tiles from a partial JSON stream ─────────────────────────
+
 function extractTilesFromStream(text: string): InsightTile[] {
   const tiles: InsightTile[] = [];
   let depth = 0;
@@ -91,62 +92,135 @@ function extractTilesFromStream(text: string): InsightTile[] {
   return tiles;
 }
 
-const colorConfig = {
-  green:  { border: 'border-success-green/30',      bg: 'bg-success-green/5',   metric: 'text-success-green',   badge: 'bg-success-green/15 text-success-green border-success-green/30' },
-  red:    { border: 'border-danger-red/30',          bg: 'bg-danger-red/5',      metric: 'text-danger-red',      badge: 'bg-danger-red/15 text-danger-red border-danger-red/30' },
-  orange: { border: 'border-yellow-500/30',          bg: 'bg-yellow-500/5',      metric: 'text-yellow-400',      badge: 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30' },
-  yellow: { border: 'border-electric-yellow/30',     bg: 'bg-electric-yellow/5', metric: 'text-electric-yellow', badge: 'bg-electric-yellow/15 text-electric-yellow border-electric-yellow/30' },
+// ─── Color config (brand variables) ───────────────────────────────────────────
+
+const COLOR: Record<string, { metricColor: string; borderColor: string; bgColor: string; badgeColor: string; badgeBg: string; badgeBorder: string }> = {
+  green: {
+    metricColor:  'var(--brand-primary)',
+    borderColor:  'color-mix(in srgb, var(--brand-primary) 30%, transparent)',
+    bgColor:      'color-mix(in srgb, var(--brand-primary) 5%, transparent)',
+    badgeColor:   'var(--brand-primary)',
+    badgeBg:      'color-mix(in srgb, var(--brand-primary) 12%, transparent)',
+    badgeBorder:  'color-mix(in srgb, var(--brand-primary) 35%, transparent)',
+  },
+  red: {
+    metricColor:  '#ef4444',
+    borderColor:  'rgba(239,68,68,0.3)',
+    bgColor:      'rgba(239,68,68,0.04)',
+    badgeColor:   '#ef4444',
+    badgeBg:      'rgba(239,68,68,0.1)',
+    badgeBorder:  'rgba(239,68,68,0.3)',
+  },
+  orange: {
+    metricColor:  '#f59e0b',
+    borderColor:  'rgba(245,158,11,0.3)',
+    bgColor:      'rgba(245,158,11,0.04)',
+    badgeColor:   '#f59e0b',
+    badgeBg:      'rgba(245,158,11,0.1)',
+    badgeBorder:  'rgba(245,158,11,0.3)',
+  },
+  yellow: {
+    metricColor:  '#eab308',
+    borderColor:  'rgba(234,179,8,0.3)',
+    bgColor:      'rgba(234,179,8,0.04)',
+    badgeColor:   '#eab308',
+    badgeBg:      'rgba(234,179,8,0.1)',
+    badgeBorder:  'rgba(234,179,8,0.3)',
+  },
 };
 
-const actionLabel: Record<string, string> = {
-  SCALE: '⚡ SCALE', PAUSE: '🟥 PAUSE', INVESTIGATE: '🔍 INVESTIGATE', OPTIMIZE: '⚙️ OPTIMIZE',
+const ACTION_LABEL: Record<string, string> = {
+  SCALE: 'SCALE', PAUSE: 'PAUSE', INVESTIGATE: 'INVESTIGATE', OPTIMIZE: 'OPTIMIZE',
 };
+
+// ─── Skeleton tile ─────────────────────────────────────────────────────────────
 
 const SkeletonTile: React.FC = () => (
-  <div className="bg-card-dark border border-border-dark rounded-xl p-4 flex flex-col gap-3 animate-pulse min-h-[130px]">
+  <div
+    className="rounded flex flex-col gap-3 animate-pulse"
+    style={{
+      background: 'var(--brand-surface-card)',
+      border: '1px solid var(--brand-muted)',
+      padding: '16px',
+      minHeight: 140,
+    }}
+  >
     <div className="flex items-center justify-between">
-      <div className="h-3 bg-border-dark rounded w-2/3" />
-      <div className="h-4 bg-border-dark rounded w-16" />
+      <div className="h-2.5 rounded w-2/3" style={{ background: 'var(--brand-muted)' }} />
+      <div className="h-4 rounded w-14" style={{ background: 'var(--brand-muted)' }} />
     </div>
-    <div className="h-6 bg-border-dark rounded w-1/2" />
-    <div className="h-3 bg-border-dark rounded w-full mt-1" />
-    <div className="h-3 bg-border-dark rounded w-3/4" />
+    <div className="h-6 rounded w-1/2" style={{ background: 'var(--brand-muted)' }} />
+    <div className="h-2.5 rounded w-full mt-1" style={{ background: 'var(--brand-muted)' }} />
+    <div className="h-2.5 rounded w-3/4" style={{ background: 'var(--brand-muted)' }} />
   </div>
 );
 
+// ─── Tile card ────────────────────────────────────────────────────────────────
+
 const TileCard: React.FC<{ tile: InsightTile }> = ({ tile }) => {
-  const cfg = colorConfig[tile.color as keyof typeof colorConfig] ?? colorConfig.orange;
+  const cfg = COLOR[tile.color] ?? COLOR.orange;
   return (
-    <div className={`border ${cfg.border} ${cfg.bg} rounded-xl p-4 flex flex-col gap-2.5 hover:scale-[1.01] transition-transform duration-200`}>
+    <div
+      className="flex flex-col gap-3 transition-transform duration-150 hover:scale-[1.01]"
+      style={{
+        background: cfg.bgColor,
+        border: `1px solid ${cfg.borderColor}`,
+        borderRadius: 6,
+        padding: '16px',
+      }}
+    >
+      {/* Top row: title + badge */}
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-base leading-none">{tile.emoji}</span>
-          <p className="text-white font-display font-bold uppercase tracking-wide text-[11px] leading-tight">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-base leading-none shrink-0">{tile.emoji}</span>
+          <p
+            className="font-black uppercase tracking-wide text-[11px] leading-tight text-white"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
             {tile.title}
           </p>
         </div>
-        <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-widest whitespace-nowrap ${cfg.badge}`}>
-          {actionLabel[tile.action] ?? tile.action}
+        <span
+          className="shrink-0 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
+          style={{
+            color: cfg.badgeColor,
+            background: cfg.badgeBg,
+            border: `1px solid ${cfg.badgeBorder}`,
+          }}
+        >
+          {ACTION_LABEL[tile.action] ?? tile.action}
         </span>
       </div>
-      <p className={`font-display font-black text-xl leading-tight ${cfg.metric}`}>
+
+      {/* Metric */}
+      <p
+        className="font-black text-xl leading-tight"
+        style={{ color: cfg.metricColor, fontFamily: 'var(--font-display)' }}
+      >
         {tile.metric}
       </p>
-      <p className="text-text-secondary text-xs leading-relaxed border-t border-border-dark/50 pt-2">
+
+      {/* Context */}
+      <p
+        className="text-xs leading-relaxed border-t pt-2"
+        style={{ color: '#6b7280', borderColor: 'var(--brand-muted)' }}
+      >
         {tile.context}
       </p>
     </div>
   );
 };
 
+// ─── Main component ────────────────────────────────────────────────────────────
+
 export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
   report,
   fileNames,
   secondFileContent,
 }) => {
-  const [tiles, setTiles]         = useState<InsightTile[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [error, setError]         = useState('');
+  const [tiles,       setTiles]       = useState<InsightTile[]>([]);
+  const [isStreaming, setIsStreaming]  = useState(false);
+  const [error,       setError]       = useState('');
   const lastKey = useRef('');
 
   const reportKey = `${report.totalRevenue}|${report.campaigns.length}|${report.funnelSteps.length}|${report.flags.length}|${fileNames.join(',')}`;
@@ -156,7 +230,7 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
     if (report.campaigns.length === 0 && report.funnelSteps.length === 0) return;
     lastKey.current = reportKey;
     generateTiles();
-  }, [reportKey]);
+  }, [reportKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generateTiles = async () => {
     setIsStreaming(true);
@@ -198,9 +272,9 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
         blendedRoas: +report.blendedRoas.toFixed(2),
         totalCampaigns: report.campaigns.length,
         criticalCount: report.criticalCampaigns.length,
-        scalerCount: report.campaigns.filter((c) => c.status === 'SCALE').length,
+        scalerCount: report.campaigns.filter(c => c.status === 'SCALE').length,
       },
-      campaigns: allCampaigns.map((c) => ({
+      campaigns: allCampaigns.map(c => ({
         name: c.name, platform: c.platform, country: c.country,
         spend: c.spend, revenue: c.revenue, roas: +c.roas.toFixed(2),
         ctr: +c.ctr.toFixed(2), cr: +c.conversionRate.toFixed(2),
@@ -209,7 +283,7 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
         audience: c.audienceType, format: c.format, placement: c.placement,
       })),
       platformBreakdown: platformStats,
-      geoBreakdown: report.geoStats.map((g) => ({
+      geoBreakdown: report.geoStats.map(g => ({
         country: g.country, roas: +g.roas.toFixed(2), revenue: g.revenue,
         spend: g.spend, aov: +g.aov.toFixed(0), cr: +g.cr.toFixed(2), flag: g.flag,
       })),
@@ -223,16 +297,16 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
         platform: report.topScorer.platform, country: report.topScorer.country,
         spend: report.topScorer.spend, revenue: report.topScorer.revenue,
       } : null,
-      criticalCampaigns: report.criticalCampaigns.map((c) => ({
+      criticalCampaigns: report.criticalCampaigns.map(c => ({
         name: c.name, spend: c.spend, roas: +c.roas.toFixed(2),
         platform: c.platform, country: c.country,
       })),
-      funnel: report.funnelSteps.map((s) => ({
+      funnel: report.funnelSteps.map(s => ({
         step: s.label, users: s.users, dropPct: +s.dropPct.toFixed(1), alert: s.alertLevel,
       })),
       biggestLeak: report.biggestLeak,
       checkoutFriction: report.checkoutFriction,
-      flags: report.flags.map((f) => ({
+      flags: report.flags.map(f => ({
         type: f.type, severity: f.severity, message: f.message, fix: f.recommendation,
       })),
     };
@@ -258,7 +332,6 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
         }
       }
 
-      // Final parse for clean complete array
       const arrMatch = accumulated.match(/\[[\s\S]*\]/);
       if (arrMatch) {
         try {
@@ -279,21 +352,27 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
   if (!isStreaming && tiles.length === 0 && !error) return null;
 
   return (
-    <div className="mb-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3 px-0.5">
+    <div className="mt-5">
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full bg-electric-yellow ${isStreaming ? 'animate-pulse' : ''}`} />
-          <h2 className="text-white font-display font-black uppercase tracking-widest text-xs">
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: 'var(--brand-primary)', animation: isStreaming ? 'pulse 1.5s ease-in-out infinite' : 'none' }}
+          />
+          <span
+            className="font-black uppercase tracking-widest text-[10px] text-white"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
             Scale Live Insights
-          </h2>
+          </span>
           {isStreaming && tiles.length > 0 && (
-            <span className="text-text-secondary text-[10px] font-mono hidden sm:inline">
+            <span className="text-[10px] font-mono" style={{ color: '#6b7280' }}>
               — generating {tiles.length}/{TOTAL_TILES}…
             </span>
           )}
           {!isStreaming && tiles.length > 0 && (
-            <span className="text-text-secondary text-[10px] font-mono hidden sm:inline">
+            <span className="text-[10px] font-mono" style={{ color: '#4b5563' }}>
               — {fileNames.join(' + ')}
             </span>
           )}
@@ -301,26 +380,33 @@ export const LiveInsightsTiles: React.FC<LiveInsightsTilesProps> = ({
         {!isStreaming && (
           <button
             onClick={generateTiles}
-            className="text-[10px] text-text-secondary hover:text-electric-yellow uppercase tracking-wider font-bold transition-colors"
+            className="text-[10px] font-mono font-bold uppercase tracking-wider transition-colors"
+            style={{ color: '#6b7280' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--brand-primary)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#6b7280'; }}
           >
-            ↺ Refresh
+            ↺ Regenerate
           </button>
         )}
       </div>
 
-      {/* Content */}
+      {/* ── Content ─────────────────────────────────────────────────────────── */}
       {error ? (
-        <div className="flex items-center justify-between bg-card-dark border border-border-dark rounded-xl p-4">
-          <p className="text-danger-red text-xs font-mono">{error}</p>
+        <div
+          className="flex items-center justify-between rounded p-4"
+          style={{ background: 'var(--brand-surface-card)', border: '1px solid var(--brand-muted)' }}
+        >
+          <p className="text-xs font-mono" style={{ color: '#ef4444' }}>{error}</p>
           <button
             onClick={generateTiles}
-            className="ml-4 shrink-0 text-[10px] px-3 py-1.5 bg-electric-yellow text-deep-black rounded-lg font-bold uppercase tracking-wider"
+            className="ml-4 shrink-0 text-[10px] font-mono font-bold px-3 py-1.5 rounded uppercase tracking-wider"
+            style={{ background: 'var(--brand-primary)', color: '#000' }}
           >
             Retry
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {tiles.map((tile, i) => <TileCard key={i} tile={tile} />)}
           {Array.from({ length: skeletonCount }).map((_, i) => <SkeletonTile key={`sk-${i}`} />)}
         </div>

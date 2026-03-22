@@ -1,7 +1,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// ZOLTER INTELLIGENCE ENGINE
-// Applies the full Zolter + HealthyFlow algorithm to uploaded CSV/JSON data
+// ZOLTER INTELLIGENCE ENGINE  v2 — Deep Pattern Detection
 // ─────────────────────────────────────────────────────────────────────────────
+
+export type TrendSignal = 'improving' | 'stable' | 'decaying' | 'new';
 
 export interface ParsedCampaign {
   name: string;
@@ -17,6 +18,7 @@ export interface ParsedCampaign {
   roi: number;
   status: 'SCALE' | 'OPTIMIZE' | 'CRITICAL';
   action: string;
+  trendSignal: TrendSignal;
   audienceType?: 'Prospecting' | 'Retargeting';
   format?: 'Video' | 'Static';
   placement?: 'Feed' | 'Stories' | 'Reels';
@@ -37,6 +39,26 @@ export interface GeoStat {
   aov: number;
   cr: number;
   flag: 'SCALE' | 'WATCH' | null;
+}
+
+export interface PatternInsight {
+  id: string;
+  type: 'opportunity' | 'risk' | 'trend';
+  pattern: string;
+  detail: string;
+  priority: 'High' | 'Medium' | 'Low';
+  estimatedMonthlyImpact: string;
+  action: string;
+}
+
+export interface DiagnosticFlag {
+  id: string;
+  type: 'CRITICAL_BUDGET_WASTE' | 'CONTENT_MISALIGNMENT' | 'FLOW_OBSTACLE' |
+        'CHECKOUT_FRICTION' | 'UX_FRICTION_MOBILE' | 'LOW_CONVERSION_RATE' |
+        'RETARGETING_UNDERPERFORMING' | 'VIDEO_ENGAGEMENT_NO_CONVERSION';
+  severity: 'critical' | 'warning';
+  message: string;
+  recommendation: string;
 }
 
 export interface DiagnosisReport {
@@ -61,16 +83,9 @@ export interface DiagnosisReport {
 
   // Layer 4: Flags & alerts
   flags: DiagnosticFlag[];
-}
 
-export interface DiagnosticFlag {
-  id: string;
-  type: 'CRITICAL_BUDGET_WASTE' | 'CONTENT_MISALIGNMENT' | 'FLOW_OBSTACLE' |
-        'CHECKOUT_FRICTION' | 'UX_FRICTION_MOBILE' | 'LOW_CONVERSION_RATE' |
-        'RETARGETING_UNDERPERFORMING' | 'VIDEO_ENGAGEMENT_NO_CONVERSION';
-  severity: 'critical' | 'warning';
-  message: string;
-  recommendation: string;
+  // Layer 5: Deep pattern intelligence
+  patterns: PatternInsight[];
 }
 
 // ─── CSV Parser ───────────────────────────────────────────────────────────────
@@ -78,14 +93,10 @@ export interface DiagnosticFlag {
 export function parseCSV(text: string): Record<string, string>[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
-
-  // Detect delimiter
   const delim = lines[0].includes('\t') ? '\t' : ',';
-
   const headers = lines[0].split(delim).map((h) =>
     h.replace(/^["']|["']$/g, '').trim().toLowerCase()
   );
-
   return lines.slice(1)
     .filter((l) => l.trim())
     .map((line) => {
@@ -109,6 +120,21 @@ function num(v: string): number {
   return parseFloat(v.replace(/[$,%€]/g, '').replace(/,/g, '')) || 0;
 }
 
+// ─── Trend computation ────────────────────────────────────────────────────────
+
+function computeTrend(roas: number, ctr: number, conversionRate: number, spend: number): TrendSignal {
+  if (spend === 0) return 'new';
+  // Improving: strong ROAS with solid conversion
+  if (roas > 5.5 && conversionRate > 2.0) return 'improving';
+  // Also improving: consistently above scale threshold
+  if (roas > 5.0 && ctr > 2 && ctr < 8) return 'improving';
+  // Decaying: burning budget with no intent signal
+  if (roas < 2.5) return 'decaying';
+  if (ctr > 6 && roas < 3.0) return 'decaying'; // high engagement, zero purchase intent
+  if (conversionRate > 0 && conversionRate < 0.8) return 'decaying';
+  return 'stable';
+}
+
 // ─── Zolter Campaign Algorithm ────────────────────────────────────────────────
 
 const GROSS_MARGIN = 0.40;
@@ -119,11 +145,11 @@ function computeStatus(roas: number): 'SCALE' | 'OPTIMIZE' | 'CRITICAL' {
   return 'CRITICAL';
 }
 
-function computeAction(c: Omit<ParsedCampaign, 'status' | 'action'>): string {
+function computeAction(c: Omit<ParsedCampaign, 'status' | 'action' | 'trendSignal'>): string {
   const { roas, ctr, format, audienceType, country } = c;
 
   if (roas > 5.0) {
-    return `⚡ SCALE: Increase budget +15%. Top performer in ${country || 'this market'}.`;
+    return `Scale: Increase budget +15%. Top performer in ${country || 'this market'}.`;
   }
   if (roas >= 3.0) {
     const hints: string[] = [];
@@ -131,13 +157,12 @@ function computeAction(c: Omit<ParsedCampaign, 'status' | 'action'>): string {
     if (format === 'Video' && roas < 4) hints.push('Video drives engagement, not purchase intent — test static creatives');
     if (audienceType === 'Prospecting') hints.push('Test retargeting audience — typically 2× higher ROAS');
     hints.push(`Audit CTR, creative, and audience targeting for ${country || 'this market'}`);
-    return `⚙️ OPTIMIZE: ${hints.join('. ')}.`;
+    return `Optimize: ${hints.join('. ')}.`;
   }
-  // CRITICAL
-  const hints: string[] = ['🟥 PAUSE IMMEDIATELY'];
+  const hints: string[] = ['Pause immediately'];
   if (roas < 2.5) hints.push('Operating at a loss (40% gross margin)');
   if (ctr > 5) hints.push('High CTR with low ROAS = engagement interest, zero purchase intent');
-  if (c.conversionRate < 1.5) hints.push(`CR ${c.conversionRate.toFixed(2)}% is a Flow Obstacle — fix landing page`);
+  if (c.conversionRate < 1.5) hints.push(`CR ${c.conversionRate.toFixed(2)}% is a flow obstacle — fix landing page`);
   return hints.join('. ') + '.';
 }
 
@@ -162,8 +187,9 @@ export function analyzeCampaigns(rows: Record<string, string>[]): ParsedCampaign
     const grossProfit = revenue * GROSS_MARGIN;
     const roi = spend > 0 ? ((grossProfit - spend) / spend) * 100 : 0;
     const status = computeStatus(roas);
+    const trendSignal = computeTrend(roas, ctr, convRate, spend);
 
-    const partial: Omit<ParsedCampaign, 'status' | 'action'> = {
+    const partial: Omit<ParsedCampaign, 'status' | 'action' | 'trendSignal'> = {
       name:           col(row, 'campaign', 'name', 'ad set', 'adset') || `Campaign ${i + 1}`,
       platform:       col(row, 'platform', 'channel', 'source', 'network') || 'Unknown',
       country:        col(row, 'country', 'region', 'market', 'geo', 'location') || '—',
@@ -181,7 +207,7 @@ export function analyzeCampaigns(rows: Record<string, string>[]): ParsedCampaign
                       ),
     };
 
-    return { ...partial, status, action: computeAction(partial) };
+    return { ...partial, status, action: computeAction(partial), trendSignal };
   });
 }
 
@@ -241,13 +267,9 @@ function buildGeoStats(campaigns: ParsedCampaign[]): GeoStat[] {
 
 // ─── Diagnostic Flags ─────────────────────────────────────────────────────────
 
-function buildFlags(
-  campaigns: ParsedCampaign[],
-  funnelSteps: ParsedFunnelStep[],
-): DiagnosticFlag[] {
+function buildFlags(campaigns: ParsedCampaign[], funnelSteps: ParsedFunnelStep[]): DiagnosticFlag[] {
   const flags: DiagnosticFlag[] = [];
 
-  // Low conversion rate → Flow Obstacle
   campaigns.forEach((c) => {
     if (c.conversionRate > 0 && c.conversionRate < 1.5 && c.status !== 'SCALE') {
       flags.push({
@@ -260,7 +282,6 @@ function buildFlags(
     }
   });
 
-  // Video high CTR + low ROAS
   campaigns
     .filter((c) => c.format === 'Video' && c.ctr > 4 && c.roas < 3.5)
     .forEach((c) => {
@@ -273,7 +294,6 @@ function buildFlags(
       });
     });
 
-  // Retargeting check — should be ≥2× Prospecting
   const retargetingCampaigns = campaigns.filter((c) => c.audienceType === 'Retargeting');
   const prospectingCampaigns = campaigns.filter((c) => c.audienceType === 'Prospecting');
   if (retargetingCampaigns.length > 0 && prospectingCampaigns.length > 0) {
@@ -290,7 +310,6 @@ function buildFlags(
     }
   }
 
-  // Funnel: Add-to-Cart high but Checkout low → checkout friction
   const cartStep     = funnelSteps.find((s) => s.label.toLowerCase().includes('cart'));
   const checkoutStep = funnelSteps.find((s) => s.label.toLowerCase().includes('checkout') || s.label.toLowerCase().includes('initiate'));
   if (cartStep && checkoutStep && checkoutStep.dropPct > 40) {
@@ -303,14 +322,13 @@ function buildFlags(
     });
   }
 
-  // Funnel flow obstacles
   funnelSteps.forEach((step) => {
     if (step.alertLevel === 'critical') {
       flags.push({
         id: `funnel-${step.label}`,
         type: 'FLOW_OBSTACLE',
         severity: 'critical',
-        message: `FLOW OBSTACLE at "${step.label}": ${step.dropPct.toFixed(0)}% of users lost here.`,
+        message: `Flow obstacle at "${step.label}": ${step.dropPct.toFixed(0)}% of users lost here.`,
         recommendation: `Investigate ${step.label} page: load time, UX friction, content mismatch from ads.`,
       });
     }
@@ -319,20 +337,155 @@ function buildFlags(
   return flags;
 }
 
-// ─── Auto-detect file type ────────────────────────────────────────────────────
+// ─── Deep Pattern Detection ───────────────────────────────────────────────────
+
+function detectPatterns(
+  campaigns: ParsedCampaign[],
+  funnelSteps: ParsedFunnelStep[],
+  geoStats: GeoStat[],
+  totalSpend: number,
+  totalRevenue: number,
+): PatternInsight[] {
+  const patterns: PatternInsight[] = [];
+
+  // Pattern: Scale opportunity
+  const improving = campaigns.filter(c => c.trendSignal === 'improving');
+  if (improving.length > 0) {
+    const avgRoas = improving.reduce((s, c) => s + c.roas, 0) / improving.length;
+    const daySpend = improving.reduce((s, c) => s + c.spend, 0);
+    const monthlyGain = daySpend * 0.15 * (avgRoas - 1) * 30;
+    patterns.push({
+      id: 'scale-opportunity',
+      type: 'opportunity',
+      pattern: 'Scale Opportunity',
+      detail: `${improving.length} campaign${improving.length > 1 ? 's' : ''} above ROAS threshold (avg ${avgRoas.toFixed(1)}x). Current daily spend $${daySpend.toFixed(0)} is under-capitalised.`,
+      priority: 'High',
+      estimatedMonthlyImpact: `+$${monthlyGain.toFixed(0)}/mo`,
+      action: `Increase budget +15% on: ${improving.slice(0, 3).map(c => c.name).join(', ')}. Monitor ROAS every 24h.`,
+    });
+  }
+
+  // Pattern: Critical budget waste
+  const critSpend = campaigns.filter(c => c.status === 'CRITICAL').reduce((s, c) => s + c.spend, 0);
+  if (critSpend > totalSpend * 0.15 && critSpend > 0) {
+    const topRoas = campaigns.filter(c => c.status === 'SCALE')[0]?.roas ?? 5;
+    const monthlyGain = critSpend * (topRoas - 1) * 30;
+    patterns.push({
+      id: 'critical-budget-waste',
+      type: 'risk',
+      pattern: 'Critical Budget Waste',
+      detail: `$${critSpend.toFixed(0)}/day (${((critSpend / totalSpend) * 100).toFixed(0)}% of total spend) allocated to CRITICAL campaigns operating below break-even.`,
+      priority: 'High',
+      estimatedMonthlyImpact: `+$${monthlyGain.toFixed(0)}/mo if reallocated`,
+      action: `Pause all CRITICAL campaigns. Reallocate $${critSpend.toFixed(0)}/day to top SCALE performers.`,
+    });
+  }
+
+  // Pattern: Video engagement gap (high CTR, low intent)
+  const videoDecaying = campaigns.filter(c => c.format === 'Video' && c.trendSignal === 'decaying');
+  const videoAll      = campaigns.filter(c => c.format === 'Video');
+  if (videoDecaying.length >= 2 || (videoAll.length >= 2 && videoAll.filter(c => c.ctr > 5 && c.roas < 3.5).length >= 2)) {
+    const wastedSpend = videoDecaying.reduce((s, c) => s + c.spend, 0) || videoAll.reduce((s, c) => s + c.spend, 0) * 0.4;
+    patterns.push({
+      id: 'video-engagement-gap',
+      type: 'risk',
+      pattern: 'Video Engagement Gap',
+      detail: `${videoDecaying.length || videoAll.length} video campaigns generating high CTR without purchase intent. Impressions are not converting to revenue.`,
+      priority: 'High',
+      estimatedMonthlyImpact: `+$${(wastedSpend * 0.3 * 30).toFixed(0)}/mo`,
+      action: 'Shift 30–40% of video budget to static product ads. Add price overlay and clear CTA to remaining videos.',
+    });
+  }
+
+  // Pattern: Geographic concentration risk
+  if (geoStats.length > 0 && totalRevenue > 0) {
+    const topPct = (geoStats[0].revenue / totalRevenue) * 100;
+    if (topPct > 65) {
+      patterns.push({
+        id: 'geo-concentration',
+        type: 'risk',
+        pattern: 'Geographic Concentration Risk',
+        detail: `${topPct.toFixed(0)}% of revenue from ${geoStats[0].country}. Single-market dependency creates revenue volatility and ROAS fragility.`,
+        priority: 'Medium',
+        estimatedMonthlyImpact: `Risk exposure: -$${(geoStats[0].revenue * 0.15).toFixed(0)}/mo if disrupted`,
+        action: `Test campaigns in ${geoStats.length > 1 ? geoStats[1].country : 'a second market'} with 10% of ${geoStats[0].country} budget. Diversify.`,
+      });
+    }
+  }
+
+  // Pattern: Retargeting underexploited
+  const retCampaigns = campaigns.filter(c => c.audienceType === 'Retargeting');
+  const prosCampaigns = campaigns.filter(c => c.audienceType === 'Prospecting');
+  if (retCampaigns.length > 0 && prosCampaigns.length > 0) {
+    const avgRet = retCampaigns.reduce((s, c) => s + c.roas, 0) / retCampaigns.length;
+    const avgPro = prosCampaigns.reduce((s, c) => s + c.roas, 0) / prosCampaigns.length;
+    if (avgRet < avgPro * 1.8) {
+      const prosSpend = prosCampaigns.reduce((s, c) => s + c.spend, 0);
+      patterns.push({
+        id: 'retargeting-gap',
+        type: 'opportunity',
+        pattern: 'Retargeting Opportunity',
+        detail: `Retargeting ROAS (${avgRet.toFixed(1)}x) is only ${(avgRet / avgPro).toFixed(1)}× prospecting (${avgPro.toFixed(1)}x). Expected ratio: 2×+. Warm audience is undermonetised.`,
+        priority: 'Medium',
+        estimatedMonthlyImpact: `+$${(prosSpend * 0.1 * avgRet * 30).toFixed(0)}/mo`,
+        action: 'Increase retargeting budget 20%. Narrow window to 14-day visitors. Exclude existing buyers. Refresh creative.',
+      });
+    }
+  }
+
+  // Pattern: Checkout funnel friction
+  const checkoutFunnelStep = funnelSteps.find(s =>
+    s.label.toLowerCase().includes('checkout') || s.label.toLowerCase().includes('initiate')
+  );
+  if (checkoutFunnelStep && checkoutFunnelStep.dropPct > 45) {
+    const cartUsers = funnelSteps.find(s => s.label.toLowerCase().includes('cart'))?.users ?? 0;
+    const recoverableUsers = cartUsers * (checkoutFunnelStep.dropPct / 100) * 0.12;
+    const avgOrderVal = totalRevenue > 0
+      ? totalRevenue / Math.max(campaigns.reduce((s, c) => s + c.conversions, 0), 1)
+      : 50;
+    patterns.push({
+      id: 'checkout-friction-pattern',
+      type: 'risk',
+      pattern: 'Checkout Friction Detected',
+      detail: `${checkoutFunnelStep.dropPct.toFixed(0)}% of cart visitors abandon at checkout initiation. Unexpected shipping cost or payment method gap likely cause.`,
+      priority: 'High',
+      estimatedMonthlyImpact: `+$${(recoverableUsers * avgOrderVal).toFixed(0)}/mo`,
+      action: 'Show shipping cost estimate on product page. Add Apple Pay / PayPal. Reduce checkout form to ≤3 steps.',
+    });
+  }
+
+  // Pattern: Decaying campaign cluster
+  const decaying = campaigns.filter(c => c.trendSignal === 'decaying');
+  if (decaying.length >= 3) {
+    patterns.push({
+      id: 'decay-cluster',
+      type: 'risk',
+      pattern: 'Campaign Decay Cluster',
+      detail: `${decaying.length} campaigns showing decay signal (high spend, low or falling ROAS). Creative fatigue or audience saturation likely.`,
+      priority: 'Medium',
+      estimatedMonthlyImpact: `Risk: -$${(decaying.reduce((s, c) => s + c.spend, 0) * 30).toFixed(0)}/mo ongoing`,
+      action: 'Refresh creative across all decaying campaigns. Test new audience segments. Rotate ad copy immediately.',
+    });
+  }
+
+  // Sort: High → Medium → Low, then opportunity before risk
+  const priorityOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
+  const typeOrder     = { 'opportunity': 0, 'risk': 1, 'trend': 2 };
+  return patterns.sort((a, b) =>
+    priorityOrder[a.priority] - priorityOrder[b.priority] ||
+    typeOrder[a.type] - typeOrder[b.type]
+  );
+}
+
+// ─── File type detection ──────────────────────────────────────────────────────
 
 export type FileType = 'campaigns' | 'funnel' | 'unknown';
 
 export function detectFileType(rows: Record<string, string>[]): FileType {
   if (rows.length === 0) return 'unknown';
   const headers = Object.keys(rows[0]).join(' ').toLowerCase();
-
-  const campaignSignals = ['spend', 'roas', 'revenue', 'platform', 'campaign', 'ctr', 'impression'];
-  const funnelSignals   = ['step', 'stage', 'funnel', 'sessions', 'landing', 'checkout', 'cart', 'purchase'];
-
-  const cScore = campaignSignals.filter((s) => headers.includes(s)).length;
-  const fScore = funnelSignals.filter((s) => headers.includes(s)).length;
-
+  const cScore = ['spend', 'roas', 'revenue', 'platform', 'campaign', 'ctr', 'impression'].filter(s => headers.includes(s)).length;
+  const fScore = ['step', 'stage', 'funnel', 'sessions', 'landing', 'checkout', 'cart', 'purchase'].filter(s => headers.includes(s)).length;
   if (cScore > fScore) return 'campaigns';
   if (fScore > cScore) return 'funnel';
   if (cScore > 0) return 'campaigns';
@@ -342,11 +495,7 @@ export function detectFileType(rows: Record<string, string>[]): FileType {
 
 // ─── Main: Run Full Diagnosis ─────────────────────────────────────────────────
 
-export function runDiagnosis(
-  campaignCSV?: string,
-  funnelCSV?: string,
-): DiagnosisReport {
-  // Parse whichever files are available
+export function runDiagnosis(campaignCSV?: string, funnelCSV?: string): DiagnosisReport {
   let campaignRows: Record<string, string>[] = [];
   let funnelRows:   Record<string, string>[] = [];
 
@@ -362,49 +511,43 @@ export function runDiagnosis(
     if (type === 'funnel') funnelRows = rows;
     else if (type === 'campaigns' && campaignRows.length === 0) campaignRows = rows;
   }
-
-  // If only one file provided, auto-assign
   if (campaignCSV && !funnelCSV && campaignRows.length === 0) {
-    const rows = parseCSV(campaignCSV);
-    campaignRows = rows;
+    campaignRows = parseCSV(campaignCSV);
   }
 
-  const campaigns    = campaignRows.length > 0 ? analyzeCampaigns(campaignRows) : [];
-  const funnelSteps  = funnelRows.length   > 0 ? analyzeFunnel(funnelRows)     : [];
-  const geoStats     = buildGeoStats(campaigns);
-  const flags        = buildFlags(campaigns, funnelSteps);
+  const campaigns   = campaignRows.length > 0 ? analyzeCampaigns(campaignRows) : [];
+  const funnelSteps = funnelRows.length   > 0 ? analyzeFunnel(funnelRows)      : [];
+  const geoStats    = buildGeoStats(campaigns);
+  const flags       = buildFlags(campaigns, funnelSteps);
 
   const totalSpend   = campaigns.reduce((s, c) => s + c.spend, 0);
   const totalRevenue = campaigns.reduce((s, c) => s + c.revenue, 0);
   const blendedRoas  = totalSpend > 0 ? totalRevenue / totalSpend : 0;
 
-  const sortedByCampaignRoas = [...campaigns].sort((a, b) => b.roas - a.roas);
-  const topScorer    = sortedByCampaignRoas[0] ?? null;
+  const sorted            = [...campaigns].sort((a, b) => b.roas - a.roas);
+  const topScorer         = sorted[0] ?? null;
   const criticalCampaigns = campaigns.filter((c) => c.status === 'CRITICAL');
 
-  const biggestLeak  = funnelSteps.length > 0
+  const biggestLeak = funnelSteps.length > 0
     ? funnelSteps.reduce((worst, s) => s.dropPct > worst.dropPct ? s : worst, funnelSteps[0])
     : null;
 
   const cartIdx     = funnelSteps.findIndex((s) => s.label.toLowerCase().includes('cart'));
   const checkoutIdx = funnelSteps.findIndex((s) => s.label.toLowerCase().includes('checkout'));
-  const checkoutFriction = cartIdx >= 0 && checkoutIdx > cartIdx
-    && funnelSteps[checkoutIdx].dropPct > 40;
+  const checkoutFriction = cartIdx >= 0 && checkoutIdx > cartIdx && funnelSteps[checkoutIdx].dropPct > 40;
+
+  const patterns = detectPatterns(campaigns, funnelSteps, geoStats, totalSpend, totalRevenue);
 
   return {
     generatedAt: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-    campaigns,
-    topScorer,
-    criticalCampaigns,
-    totalSpend,
-    totalRevenue,
-    blendedRoas,
+    campaigns, topScorer, criticalCampaigns,
+    totalSpend, totalRevenue, blendedRoas,
     funnelSteps,
     biggestLeak: biggestLeak ? { step: biggestLeak.label, dropPct: biggestLeak.dropPct } : null,
     checkoutFriction,
-    geoStats,
-    topCountry: geoStats[0] ?? null,
+    geoStats, topCountry: geoStats[0] ?? null,
     flags,
+    patterns,
   };
 }
 
@@ -419,19 +562,15 @@ export function pruneCSV(text: string): string {
   if (lines.length < 2) return text;
   const delim = lines[0].includes('\t') ? '\t' : ',';
   const rawHeaders = lines[0].split(delim).map((h) => h.replace(/^["']|["']$/g, '').trim().toLowerCase());
-
   const isCampaign =
     CAMPAIGN_COLS.filter((c) => rawHeaders.some((h) => h.includes(c))).length >=
     FUNNEL_COLS.filter((c) => rawHeaders.some((h) => h.includes(c))).length;
   const allowList = isCampaign ? CAMPAIGN_COLS : FUNNEL_COLS;
-
   const keepIdx = rawHeaders
     .map((h, i) => ({ h, i }))
     .filter(({ h }) => allowList.some((a) => h.includes(a)))
     .map(({ i }) => i);
-
   if (keepIdx.length === 0) return text;
-
   return lines.map((line) => {
     const vals = line.split(delim);
     return keepIdx.map((i) => vals[i] ?? '').join(delim);
@@ -444,13 +583,10 @@ export function summarizeForLLM(report: DiagnosisReport, maxCampaigns = 15): str
   const sortedBySpend = [...report.campaigns].sort((a, b) => b.spend - a.spend);
   const sortedByRoas  = [...report.campaigns].sort((a, b) => b.roas - a.roas);
   const critical = report.campaigns.filter((c) => c.status === 'CRITICAL');
-
-  const topBySpend = sortedBySpend.slice(0, maxCampaigns);
-  const combined = [...topBySpend];
+  const combined = [...sortedBySpend.slice(0, maxCampaigns)];
   for (const c of critical) {
     if (!combined.find((x) => x.name === c.name)) combined.push(c);
   }
-
   return JSON.stringify({
     summary: {
       totalCampaigns: report.campaigns.length,
@@ -459,45 +595,45 @@ export function summarizeForLLM(report: DiagnosisReport, maxCampaigns = 15): str
       blendedRoas: +report.blendedRoas.toFixed(2),
       criticalCount: critical.length,
     },
-    top3ByRoas: sortedByRoas.slice(0, 3).map((c) => ({
+    top3ByRoas: sortedByRoas.slice(0, 3).map(c => ({
       name: c.name, platform: c.platform, country: c.country,
-      roas: +c.roas.toFixed(2), spend: c.spend, status: c.status,
+      roas: +c.roas.toFixed(2), spend: c.spend, status: c.status, trendSignal: c.trendSignal,
     })),
-    bottom3ByRoas: sortedByRoas.slice(-3).map((c) => ({
+    bottom3ByRoas: sortedByRoas.slice(-3).map(c => ({
       name: c.name, platform: c.platform, country: c.country,
-      roas: +c.roas.toFixed(2), spend: c.spend, status: c.status,
+      roas: +c.roas.toFixed(2), spend: c.spend, status: c.status, trendSignal: c.trendSignal,
     })),
-    campaigns: combined.map((c) => ({
+    patterns: report.patterns.map(p => ({ pattern: p.pattern, priority: p.priority, impact: p.estimatedMonthlyImpact })),
+    campaigns: combined.map(c => ({
       name: c.name, platform: c.platform, country: c.country,
       spend: c.spend, revenue: c.revenue, roas: +c.roas.toFixed(2),
       status: c.status, ctr: +c.ctr.toFixed(1), conversions: c.conversions,
-      conversionRate: +c.conversionRate.toFixed(2),
+      conversionRate: +c.conversionRate.toFixed(2), trendSignal: c.trendSignal,
     })),
   }, null, 2);
 }
 
-// ─── Format report as chat message ───────────────────────────────────────────
+// ─── Format diagnosis as chat message ────────────────────────────────────────
 
 export function formatDiagnosisMessage(r: DiagnosisReport): string {
   const lines: string[] = [];
 
-  lines.push(`⚽ **MATCH ANALYSIS — ${r.generatedAt}**`);
+  lines.push(`**Analysis — ${r.generatedAt}**`);
   lines.push('');
 
-  // === Campaign summary ===
   if (r.campaigns.length > 0) {
-    lines.push(`📊 **CAMPAIGN PERFORMANCE** (${r.campaigns.length} campaigns)`);
+    lines.push(`**Campaign Performance** (${r.campaigns.length} campaigns)`);
     lines.push(`Blended ROAS: **${r.blendedRoas.toFixed(2)}x** | Revenue: **$${r.totalRevenue.toLocaleString()}** | Spend: **$${r.totalSpend.toLocaleString()}**`);
     lines.push('');
 
     if (r.topScorer) {
-      lines.push(`⚡ **TOP SCORER:** ${r.topScorer.name} (${r.topScorer.platform} · ${r.topScorer.country}) — ROAS **${r.topScorer.roas.toFixed(1)}x**`);
+      lines.push(`Top performer: ${r.topScorer.name} (${r.topScorer.platform} · ${r.topScorer.country}) — ROAS **${r.topScorer.roas.toFixed(1)}x**`);
       lines.push(`→ ${r.topScorer.action}`);
       lines.push('');
     }
 
     if (r.criticalCampaigns.length > 0) {
-      lines.push(`🟥 **CRITICAL — PAUSE IMMEDIATELY (${r.criticalCampaigns.length}):**`);
+      lines.push(`**Critical — Pause immediately (${r.criticalCampaigns.length}):**`);
       r.criticalCampaigns.forEach((c) => {
         lines.push(`• ${c.name} (${c.platform} · ${c.country}) ROAS ${c.roas.toFixed(1)}x — ${c.action}`);
       });
@@ -506,7 +642,7 @@ export function formatDiagnosisMessage(r: DiagnosisReport): string {
 
     const optimize = r.campaigns.filter((c) => c.status === 'OPTIMIZE');
     if (optimize.length > 0) {
-      lines.push(`⚙️ **OPTIMIZE (${optimize.length}):**`);
+      lines.push(`**Optimize (${optimize.length}):**`);
       optimize.forEach((c) => {
         lines.push(`• ${c.name} — ROAS ${c.roas.toFixed(1)}x. ${c.action}`);
       });
@@ -514,56 +650,51 @@ export function formatDiagnosisMessage(r: DiagnosisReport): string {
     }
   }
 
-  // === Funnel health ===
-  if (r.funnelSteps.length > 0) {
-    lines.push(`🪣 **FUNNEL HEALTH**`);
-    r.funnelSteps.forEach((s) => {
-      const icon = s.alertLevel === 'critical' ? '🔴' : s.alertLevel === 'warn' ? '🟡' : '🟢';
-      const drop = s.dropPct > 0 ? ` (−${s.dropPct.toFixed(0)}%)` : '';
-      lines.push(`${icon} ${s.label}: **${s.users.toLocaleString()}** users${drop}`);
+  if (r.patterns.length > 0) {
+    lines.push(`**Pattern Intelligence (${r.patterns.length} signals detected):**`);
+    r.patterns.slice(0, 3).forEach((p) => {
+      lines.push(`• [${p.priority}] ${p.pattern}: ${p.detail}`);
+      lines.push(`  Action: ${p.action}`);
+      lines.push(`  Estimated impact: ${p.estimatedMonthlyImpact}`);
     });
-    if (r.biggestLeak) {
-      lines.push('');
-      lines.push(`💧 **Biggest leak:** "${r.biggestLeak.step}" — ${r.biggestLeak.dropPct.toFixed(0)}% drop`);
-    }
-    if (r.checkoutFriction) {
-      lines.push(`⚠️ **Checkout Friction detected** — shipping/payment revealed too late`);
-    }
     lines.push('');
   }
 
-  // === Top countries ===
+  if (r.funnelSteps.length > 0) {
+    lines.push(`**Funnel Health**`);
+    r.funnelSteps.forEach((s) => {
+      const marker = s.alertLevel === 'critical' ? '[CRITICAL]' : s.alertLevel === 'warn' ? '[WARN]' : '[OK]';
+      const drop = s.dropPct > 0 ? ` (−${s.dropPct.toFixed(0)}%)` : '';
+      lines.push(`${marker} ${s.label}: **${s.users.toLocaleString()}** users${drop}`);
+    });
+    if (r.biggestLeak) lines.push(`\nBiggest leak: "${r.biggestLeak.step}" — ${r.biggestLeak.dropPct.toFixed(0)}% drop`);
+    if (r.checkoutFriction) lines.push(`Checkout friction — shipping/payment revealed too late`);
+    lines.push('');
+  }
+
   if (r.geoStats.length > 0) {
-    lines.push(`🌍 **TOP MARKETS**`);
+    lines.push(`**Top Markets**`);
     r.geoStats.slice(0, 3).forEach((g) => {
-      const badge = g.flag === 'SCALE' ? ' ⚡ SCALE' : g.flag === 'WATCH' ? ' ⚠️ WATCH' : '';
+      const badge = g.flag === 'SCALE' ? ' [SCALE]' : g.flag === 'WATCH' ? ' [WATCH]' : '';
       lines.push(`• ${g.country}: ROAS ${g.roas.toFixed(1)}x | Revenue $${g.revenue.toLocaleString()}${badge}`);
     });
     lines.push('');
   }
 
-  // === Flags ===
   if (r.flags.length > 0) {
-    lines.push(`🏥 **INJURY REPORT (${r.flags.length} issues)**`);
+    lines.push(`**Technical Issues (${r.flags.length})**`);
     r.flags.forEach((f) => {
-      const icon = f.severity === 'critical' ? '🚨' : '⚠️';
-      lines.push(`${icon} ${f.message}`);
+      lines.push(`[${f.severity.toUpperCase()}] ${f.message}`);
       lines.push(`  → ${f.recommendation}`);
     });
     lines.push('');
   }
 
-  if (r.flags.length === 0 && r.campaigns.length > 0) {
-    lines.push(`✅ **No critical technical issues detected.**`);
-    lines.push('');
-  }
-
-  lines.push(`_Ask me to drill into any campaign, country, or funnel step._`);
-
+  lines.push(`_Ask me to drill into any campaign, country, funnel step, or pattern._`);
   return lines.join('\n');
 }
 
-// ─── Answer a specific question using the diagnosis ──────────────────────────
+// ─── Answer question ──────────────────────────────────────────────────────────
 
 export function answerQuestion(question: string, report: DiagnosisReport | null): string {
   const q = question.toLowerCase();
@@ -572,22 +703,20 @@ export function answerQuestion(question: string, report: DiagnosisReport | null)
     return 'No data loaded yet. Upload a CSV file and I\'ll run the full analysis instantly.';
   }
 
-  // Scale / top performers
   if (/scale|top|best|winner|scorer/.test(q)) {
     const scalers = report.campaigns.filter((c) => c.status === 'SCALE');
-    if (scalers.length === 0) return 'No campaigns currently qualify for SCALE (ROAS > 5.0). Focus on optimizing the existing ones first.';
+    if (scalers.length === 0) return 'No campaigns qualify for SCALE (ROAS > 5.0) right now.';
     const lines = [`**${scalers.length} campaign(s) ready to SCALE:**`];
-    scalers.forEach((c) => lines.push(`• ${c.name} — ROAS **${c.roas.toFixed(1)}x** (${c.country})\n  ${c.action}`));
+    scalers.forEach((c) => lines.push(`• ${c.name} — ROAS **${c.roas.toFixed(1)}x** (${c.country}) · ${c.trendSignal}\n  ${c.action}`));
     return lines.join('\n');
   }
 
-  // Pause / critical
   if (/pause|stop|critical|kill|cut/.test(q)) {
-    if (report.criticalCampaigns.length === 0) return 'No campaigns below break-even. All campaigns are at OPTIMIZE or SCALE.';
+    if (report.criticalCampaigns.length === 0) return 'No campaigns below break-even.';
     const lines = [`**Pause these ${report.criticalCampaigns.length} campaigns NOW:**`];
     report.criticalCampaigns.forEach((c) => {
       lines.push(`• **${c.name}** (${c.platform} · ${c.country})`);
-      lines.push(`  ROAS: ${c.roas.toFixed(1)}x | CR: ${c.conversionRate.toFixed(2)}%`);
+      lines.push(`  ROAS: ${c.roas.toFixed(1)}x | CR: ${c.conversionRate.toFixed(2)}% | Trend: ${c.trendSignal}`);
       lines.push(`  ${c.action}`);
     });
     const savings = report.criticalCampaigns.reduce((s, c) => s + c.spend, 0);
@@ -595,72 +724,51 @@ export function answerQuestion(question: string, report: DiagnosisReport | null)
     return lines.join('\n');
   }
 
-  // Funnel / leak / pipeline
+  if (/pattern|trend|insight|signal/.test(q)) {
+    if (report.patterns.length === 0) return 'No patterns detected. Upload more data for deeper analysis.';
+    const lines = [`**${report.patterns.length} patterns detected:**`];
+    report.patterns.forEach(p => {
+      lines.push(`\n[${p.priority}] **${p.pattern}** (${p.type})`);
+      lines.push(p.detail);
+      lines.push(`Estimated impact: ${p.estimatedMonthlyImpact}`);
+      lines.push(`Action: ${p.action}`);
+    });
+    return lines.join('\n');
+  }
+
   if (/funnel|leak|pipe|drop|checkout|cart/.test(q)) {
-    if (report.funnelSteps.length === 0) return 'No funnel data loaded. Upload your ecommerce/funnel CSV.';
+    if (report.funnelSteps.length === 0) return 'No funnel data loaded.';
     const lines = ['**Funnel Analysis:**'];
     report.funnelSteps.forEach((s) => {
-      const icon = s.alertLevel === 'critical' ? '🔴' : s.alertLevel === 'warn' ? '🟡' : '🟢';
-      lines.push(`${icon} ${s.label}: ${s.users.toLocaleString()} users${s.dropPct > 0 ? ` (−${s.dropPct.toFixed(0)}%)` : ''}`);
+      const marker = s.alertLevel === 'critical' ? '[CRITICAL]' : s.alertLevel === 'warn' ? '[WARN]' : '[OK]';
+      lines.push(`${marker} ${s.label}: ${s.users.toLocaleString()} users${s.dropPct > 0 ? ` (−${s.dropPct.toFixed(0)}%)` : ''}`);
     });
-    if (report.biggestLeak) {
-      lines.push(`\n💧 **Biggest leak: "${report.biggestLeak.step}"** — ${report.biggestLeak.dropPct.toFixed(0)}% of users abandon here.`);
-    }
-    if (report.checkoutFriction) {
-      lines.push('\n⚠️ **Checkout friction confirmed.** Show shipping + payment options on the cart page, not at checkout.');
-    }
-    const flags = report.flags.filter((f) => f.type === 'FLOW_OBSTACLE' || f.type === 'CHECKOUT_FRICTION');
-    flags.forEach((f) => lines.push(`\n→ ${f.recommendation}`));
+    if (report.biggestLeak) lines.push(`\nBiggest leak: "${report.biggestLeak.step}" — ${report.biggestLeak.dropPct.toFixed(0)}% abandon here.`);
+    if (report.checkoutFriction) lines.push('\nCheckout friction confirmed. Show shipping + payment options earlier.');
     return lines.join('\n');
   }
 
-  // Country / geo
-  if (/countr|market|geo|region|israel|germany|uk|spain|france/.test(q)) {
-    if (report.geoStats.length === 0) return 'No geographic data in the uploaded files. Make sure campaigns have a Country column.';
+  if (/countr|market|geo|region/.test(q)) {
+    if (report.geoStats.length === 0) return 'No geographic data found.';
     const lines = ['**Market Performance:**'];
     report.geoStats.forEach((g) => {
-      const badge = g.flag === 'SCALE' ? ' ⚡' : g.flag === 'WATCH' ? ' ⚠️' : '';
+      const badge = g.flag === 'SCALE' ? ' [SCALE]' : g.flag === 'WATCH' ? ' [WATCH]' : '';
       lines.push(`• **${g.country}${badge}**: ROAS ${g.roas.toFixed(1)}x | Revenue $${g.revenue.toLocaleString()} | AOV $${g.aov.toFixed(0)}`);
     });
-    if (report.topCountry) {
-      lines.push(`\n**Best market: ${report.topCountry.country}** (ROAS ${report.topCountry.roas.toFixed(1)}x). Prioritize budget here.`);
-    }
+    if (report.topCountry) lines.push(`\nBest market: ${report.topCountry.country} (ROAS ${report.topCountry.roas.toFixed(1)}x).`);
     return lines.join('\n');
   }
 
-  // ROAS question
   if (/roas|roi|profit|return/.test(q)) {
     const lines = [`**Blended ROAS: ${report.blendedRoas.toFixed(2)}x**`];
-    const status = report.blendedRoas > 5 ? '⚡ SCALE' : report.blendedRoas >= 3 ? '⚙️ OPTIMIZE' : '🟥 CRITICAL';
+    const status = report.blendedRoas > 5 ? 'SCALE' : report.blendedRoas >= 3 ? 'OPTIMIZE' : 'CRITICAL';
     lines.push(`Status: ${status}`);
     lines.push('');
-    lines.push('Per campaign:');
     [...report.campaigns].sort((a, b) => b.roas - a.roas).forEach((c) => {
-      const icon = c.status === 'SCALE' ? '⚡' : c.status === 'OPTIMIZE' ? '⚙️' : '🟥';
-      lines.push(`${icon} ${c.name}: **${c.roas.toFixed(1)}x**`);
+      lines.push(`• ${c.name}: **${c.roas.toFixed(1)}x** [${c.status}] · ${c.trendSignal}`);
     });
     return lines.join('\n');
   }
 
-  // Injury / technical / bugs
-  if (/injur|technical|bug|error|health|404|mobile|slow/.test(q)) {
-    if (report.flags.length === 0) return '✅ No technical issues detected in the uploaded data.';
-    const lines = ['**Technical Health Report:**'];
-    report.flags.forEach((f) => {
-      const icon = f.severity === 'critical' ? '🚨' : '⚠️';
-      lines.push(`${icon} ${f.message}`);
-      lines.push(`  → ${f.recommendation}`);
-    });
-    return lines.join('\n');
-  }
-
-  // TikTok specific
-  if (/tiktok|tik tok/.test(q)) {
-    const tt = report.campaigns.find((c) => c.platform.toLowerCase().includes('tiktok') || c.platform.toLowerCase().includes('tik'));
-    if (!tt) return 'No TikTok campaigns found in the data.';
-    return `**TikTok Analysis:**\n${tt.name} — ROAS **${tt.roas.toFixed(1)}x** | CR: **${tt.conversionRate.toFixed(2)}%**\nStatus: ${tt.status}\n${tt.action}`;
-  }
-
-  // Default: run summary
   return formatDiagnosisMessage(report);
 }

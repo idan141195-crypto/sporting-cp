@@ -1,0 +1,17 @@
+{
+  "adset_1773838025634": {
+    "date": "2026-03-18",
+    "adSetName": "Test Ad Set",
+    "preScaleBudgetCents": 5000,
+    "scaledAt": "2026-03-18T12:47:05.635Z",
+    "rolledBack": true,
+    "rolledBackAt": "2026-03-18T12:47:05.636Z"
+  },
+  "demo_003": {
+    "date": "2026-03-19",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "preScaleBudgetCents": 5000,
+    "scaledAt": "2026-03-19T11:53:18.239Z",
+    "rolledBack": false
+  }
+}

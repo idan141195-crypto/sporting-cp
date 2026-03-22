@@ -1,0 +1,122 @@
+[
+  {
+    "timestamp": "2026-03-19T17:00:01.168Z",
+    "action": "ERROR",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Rollback failed: Meta API call failed after 0 attempt(s): Meta API call failed after 0 attempt(s) [code 2500]: Invalid token: \"demo_003\".  An ID has already been specified.",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-19T17:45:00.484Z",
+    "action": "ERROR",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Rollback failed: Meta API call failed after 0 attempt(s): Meta API call failed after 0 attempt(s) [code 2500]: Invalid token: \"demo_003\".  An ID has already been specified.",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-19T18:00:01.078Z",
+    "action": "ERROR",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Rollback failed: Meta API call failed after 0 attempt(s): Meta API call failed after 0 attempt(s) [code 2500]: Invalid token: \"demo_003\".  An ID has already been specified.",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-19T18:45:01.283Z",
+    "action": "ERROR",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Rollback failed: Meta API call failed after 0 attempt(s): Meta API call failed after 0 attempt(s) [code 2500]: Invalid token: \"demo_003\".  An ID has already been specified.",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-19T19:30:00.719Z",
+    "action": "ERROR",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Rollback failed: Meta API call failed after 0 attempt(s): Meta API call failed after 0 attempt(s) [code 2500]: Invalid token: \"demo_003\".  An ID has already been specified.",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-19T19:45:01.550Z",
+    "action": "ERROR",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Rollback failed: Meta API call failed after 0 attempt(s): Meta API call failed after 0 attempt(s) [code 2500]: Invalid token: \"demo_003\".  An ID has already been specified.",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-19T20:00:01.051Z",
+    "action": "ERROR",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Rollback failed: Meta API call failed after 0 attempt(s): Meta API call failed after 0 attempt(s) [code 2500]: Invalid token: \"demo_003\".  An ID has already been specified.",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-19T20:30:00.558Z",
+    "action": "ERROR",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Rollback failed: Meta API call failed after 0 attempt(s): Meta API call failed after 0 attempt(s) [code 2500]: Invalid token: \"demo_003\".  An ID has already been specified.",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-19T21:30:00.691Z",
+    "action": "ERROR",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Rollback failed: Meta API call failed after 0 attempt(s): Meta API call failed after 0 attempt(s) [code 2500]: Invalid token: \"demo_003\".  An ID has already been specified.",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-19T23:00:00.970Z",
+    "action": "ERROR",
+    "adSetName": "Sports Gear — Lookalike 5%",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Rollback failed: Meta API call failed after 0 attempt(s): Meta API call failed after 0 attempt(s) [code 2500]: Invalid token: \"demo_003\".  An ID has already been specified.",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-20T10:15:14.994Z",
+    "action": "ERROR",
+    "adSetName": "System",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Meta API fetch failed: The request was made but no response was received",
+    "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-20T10:30:00.607Z",
+    "action": "ERROR",
+    "adSetName": "System",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Meta API fetch failed: The request was made but no response was received",
+    "mockStore": null
+  }
+]

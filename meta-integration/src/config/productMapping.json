@@ -1,0 +1,45 @@
+{
+  "_description": "Budo Store product catalog → Meta Test Account ad set mapping. Each product is wired to exactly one Meta ad set. The mockProductKey must match a key in MockStoreService PRODUCTS (lowercase).",
+  "products": [
+    {
+      "productId": 101,
+      "productName": "Budo Pro Gloves",
+      "category": "Combat Equipment",
+      "mockProductKey": "sports gear",
+      "metaAdSetId": "23850001",
+      "metaAdSetName": "Budo – Sports Gear Retargeting"
+    },
+    {
+      "productId": 102,
+      "productName": "Budo Summer Training Gi",
+      "category": "Apparel",
+      "mockProductKey": "summer collection",
+      "metaAdSetId": "23850002",
+      "metaAdSetName": "Budo – Summer Collection Prospecting"
+    },
+    {
+      "productId": 103,
+      "productName": "Budo Elite Foot Protectors",
+      "category": "Premium Gear",
+      "mockProductKey": "premium footwear",
+      "metaAdSetId": "23850003",
+      "metaAdSetName": "Budo – Premium Products Retargeting"
+    },
+    {
+      "productId": 104,
+      "productName": "Budo Sparring Accessories Pack",
+      "category": "Accessories",
+      "mockProductKey": "accessories bundle",
+      "metaAdSetId": "23850004",
+      "metaAdSetName": "Budo – Accessories Bundle"
+    },
+    {
+      "productId": 105,
+      "productName": "Budo Kids Starter Set",
+      "category": "Kids",
+      "mockProductKey": "kids collection",
+      "metaAdSetId": "23850005",
+      "metaAdSetName": "Budo – Kids Collection"
+    }
+  ]
+}

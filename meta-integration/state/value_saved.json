@@ -1,0 +1,42 @@
+{
+  "totalWasteSavedCents": 0,
+  "pauses": {
+    "demo_001": {
+      "adSetName": "Summer Collection — Retargeting",
+      "pauseReason": "LOW_INVENTORY",
+      "productKey": null,
+      "dailyBudgetCents": 5000,
+      "pausedAt": "2026-03-19T11:53:18.237Z",
+      "resumedAt": null,
+      "wasteSavedCents": null
+    },
+    "demo_004": {
+      "adSetName": "Premium Footwear — Broad Match",
+      "pauseReason": "LOW_INVENTORY",
+      "productKey": null,
+      "dailyBudgetCents": 2500,
+      "pausedAt": "2026-03-19T11:53:18.238Z",
+      "resumedAt": null,
+      "wasteSavedCents": null
+    },
+    "demo_005": {
+      "adSetName": "Accessories Bundle — Interest Stack",
+      "pauseReason": "LOW_INVENTORY",
+      "productKey": null,
+      "dailyBudgetCents": 7000,
+      "pausedAt": "2026-03-19T13:00:00.855Z",
+      "resumedAt": null,
+      "wasteSavedCents": null
+    },
+    "demo_003": {
+      "adSetName": "Sports Gear — Lookalike 5%",
+      "pauseReason": "LOW_INVENTORY",
+      "productKey": null,
+      "dailyBudgetCents": 8000,
+      "pausedAt": "2026-03-19T13:45:00.079Z",
+      "resumedAt": null,
+      "wasteSavedCents": null
+    }
+  },
+  "history": []
+}
