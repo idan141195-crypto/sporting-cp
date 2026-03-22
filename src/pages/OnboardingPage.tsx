@@ -4,7 +4,7 @@ import {
   Palette, SkipForward, AlertCircle,
   Upload, FileText, Activity,
 } from 'lucide-react';
-import { resolveBrand, applyBrand, saveBrand as saveBrandConfig } from '../lib/BrandingService';
+import { resolveBrand, applyBrand, saveBrand as saveBrandConfig, useBrand } from '../lib/BrandingService';
 import { scanBrand, saveBrand as saveBrandProfile } from '../lib/brandContext';
 import { saveUserConfig } from '../lib/userConfig';
 import Anthropic from '@anthropic-ai/sdk';
@@ -72,28 +72,26 @@ async function callClaude(system: string, user: string): Promise<string> {
 // ── Welcome Step ──────────────────────────────────────────────────────────────
 
 function WelcomeStep({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+  const brand = useBrand();
   return (
     <div className="text-center space-y-8">
-      {/* Logo */}
+      {/* Logo — matches Dashboard header */}
       <div className="flex items-center justify-center gap-3">
-        <div style={{
-          width: 54, height: 54, borderRadius: 16, flexShrink: 0,
-          background: 'linear-gradient(135deg, #1a1200 0%, #2a1f00 100%)',
-          border: '1px solid rgba(240,180,41,0.35)',
-          boxShadow: '0 0 24px rgba(240,180,41,0.18)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <rect x="2" y="14" width="5" height="8" rx="1.5" fill="#F0B429" opacity="0.45"/>
-            <rect x="9.5" y="8" width="5" height="14" rx="1.5" fill="#F0B429" opacity="0.72"/>
-            <rect x="17" y="2" width="5" height="20" rx="1.5" fill="#F0B429"/>
-          </svg>
-        </div>
+        <img
+          src={brand.logoUrl}
+          alt={brand.name}
+          style={{
+            width: 64, height: 64, borderRadius: 16, objectFit: 'contain', flexShrink: 0,
+            background: `${brand.primary}18`,
+            border: `1px solid ${brand.primary}55`,
+            boxShadow: `0 0 28px ${brand.primary}30`,
+          }}
+        />
         <div className="text-left">
           <div className="text-3xl font-black text-white tracking-tight leading-none">
-            <span style={{ fontWeight: 900, letterSpacing: '-0.03em' }}>SCALE</span><span style={{ color: '#F0B429', fontWeight: 300 }}>AI</span>
+            <span style={{ fontWeight: 900, letterSpacing: '-0.03em' }}>SCALE</span><span style={{ color: brand.primary, fontWeight: 900 }}>AI</span>
           </div>
-          <div className="text-[10px] text-white/30 tracking-widest uppercase mt-0.5">Marketing Platform</div>
+          <div className="text-[10px] tracking-widest uppercase mt-0.5" style={{ color: `${brand.primary}80` }}>Marketing Platform</div>
         </div>
       </div>
 
