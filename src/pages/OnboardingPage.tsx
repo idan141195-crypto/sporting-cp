@@ -119,10 +119,12 @@ function WelcomeStep({ onStart, onSkip }: { onStart: () => void; onSkip: () => v
 
       <button
         onClick={onSkip}
-        className="w-full py-2 text-white/25 hover:text-white/50 text-xs flex items-center justify-center gap-1.5 transition-colors"
+        className="w-full py-2.5 rounded-xl border border-white/10 bg-white/[0.03] text-white/50 hover:text-white/80 hover:border-white/20 text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
       >
-        <SkipForward size={12} /> Skip setup — go straight to dashboard
+        <SkipForward size={14} /> Skip setup — go straight to dashboard
       </button>
+
+      <FileAnalystSection />
 
     </div>
   );
