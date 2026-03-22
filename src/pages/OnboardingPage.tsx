@@ -176,29 +176,76 @@ function FileAnalystSection() {
   }
 
   return (
-    <div className="space-y-3 mt-2">
+    <div className="mt-4">
       {/* Divider */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3 mb-4">
         <div className="h-px flex-1 bg-white/[0.06]" />
-        <span className="text-[11px] text-white/25 uppercase tracking-widest">or try now — no setup</span>
+        <span className="text-[10px] text-white/20 uppercase tracking-widest font-medium">or try instantly</span>
         <div className="h-px flex-1 bg-white/[0.06]" />
       </div>
 
-      {/* Header */}
-      <div className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-4 space-y-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-amber-400/10 border border-amber-400/20 rounded-lg flex items-center justify-center shrink-0">
-            <Activity size={15} className="text-amber-400" />
+      {/* Card */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, rgba(251,191,36,0.06) 0%, rgba(251,191,36,0.02) 50%, rgba(255,255,255,0.02) 100%)',
+          border: '1px solid rgba(251,191,36,0.12)',
+          borderRadius: 16,
+          padding: '20px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Subtle glow */}
+        <div style={{
+          position: 'absolute', top: -40, right: -40,
+          width: 120, height: 120, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(251,191,36,0.08) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Header row */}
+        <div className="flex items-center gap-3 mb-3">
+          <div style={{
+            width: 36, height: 36,
+            background: 'rgba(251,191,36,0.12)',
+            border: '1px solid rgba(251,191,36,0.25)',
+            borderRadius: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+            boxShadow: '0 0 16px rgba(251,191,36,0.12)',
+          }}>
+            <Activity size={16} className="text-amber-400" />
           </div>
-          <div>
-            <div className="text-white text-sm font-bold leading-tight">AI File Analyst</div>
-            <div className="text-white/35 text-[11px] mt-0.5">Upload your ad data — get instant AI insights</div>
+          <div className="flex-1 min-w-0">
+            <div className="text-white font-bold text-sm leading-tight">AI File Analyst</div>
+            <div className="text-white/40 text-[11px] mt-0.5 leading-tight">
+              Upload ad data · get actionable insights in seconds
+            </div>
+          </div>
+          <div className="shrink-0">
+            <span style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'rgba(251,191,36,0.7)',
+              background: 'rgba(251,191,36,0.08)',
+              border: '1px solid rgba(251,191,36,0.18)',
+              borderRadius: 20, padding: '2px 8px',
+            }}>
+              Free
+            </span>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {['Campaign performance', 'Budget efficiency', 'ROAS breakdown', 'Growth opportunities'].map(tag => (
-            <span key={tag} className="text-[10px] px-2 py-0.5 bg-white/[0.04] text-white/30 rounded-full border border-white/[0.07]">
+        {/* Capability pills */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {['ROAS analysis', 'Budget waste', 'Creative fatigue', 'Scaling signals'].map(tag => (
+            <span key={tag} style={{
+              fontSize: 10, padding: '2px 8px',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.07)',
+              borderRadius: 20,
+              color: 'rgba(255,255,255,0.35)',
+            }}>
               {tag}
             </span>
           ))}
@@ -207,7 +254,23 @@ function FileAnalystSection() {
         {/* Drop zone */}
         <div
           onClick={() => inputRef.current?.click()}
-          className="relative border border-dashed border-white/10 rounded-lg p-4 cursor-pointer text-center transition-colors hover:border-amber-400/30 hover:bg-amber-400/[0.02]"
+          style={{
+            border: '1px dashed rgba(251,191,36,0.2)',
+            borderRadius: 10,
+            padding: '14px 16px',
+            cursor: 'pointer',
+            textAlign: 'center',
+            transition: 'all 0.2s',
+            background: 'rgba(0,0,0,0.2)',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251,191,36,0.45)';
+            (e.currentTarget as HTMLElement).style.background = 'rgba(251,191,36,0.04)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251,191,36,0.2)';
+            (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.2)';
+          }}
         >
           <input
             ref={inputRef}
@@ -217,36 +280,41 @@ function FileAnalystSection() {
             onChange={e => { const f = e.target.files?.[0]; if (f) analyzeFile(f); }}
           />
           {loading ? (
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 size={18} className="animate-spin text-amber-400" />
+            <div className="flex items-center justify-center gap-2.5">
+              <Loader2 size={15} className="animate-spin text-amber-400 shrink-0" />
               <span className="text-white/40 text-xs">Analyzing {file?.name}…</span>
             </div>
           ) : file ? (
             <div className="flex items-center justify-center gap-2">
-              <FileText size={13} className="text-amber-400" />
-              <span className="text-white/60 text-xs">{file.name}</span>
-              <span className="text-white/25 text-xs">· click to change</span>
+              <FileText size={13} className="text-amber-400 shrink-0" />
+              <span className="text-white/60 text-xs truncate">{file.name}</span>
+              <span className="text-white/25 text-xs shrink-0">· change</span>
             </div>
           ) : (
-            <div className="space-y-1">
-              <Upload size={16} className="mx-auto text-white/20" />
-              <p className="text-white/30 text-xs">CSV · Excel · PDF · TXT</p>
+            <div className="flex items-center justify-center gap-2">
+              <Upload size={13} style={{ color: 'rgba(251,191,36,0.4)' }} />
+              <span className="text-white/35 text-xs">Drop file or click — CSV, Excel, PDF, TXT</span>
             </div>
           )}
         </div>
 
+        {/* Error */}
         {err && (
-          <div className="flex items-center gap-2 text-red-400 text-xs bg-red-400/5 border border-red-400/20 rounded-lg p-3">
+          <div className="flex items-center gap-2 text-red-400 text-xs bg-red-400/5 border border-red-400/15 rounded-lg p-3 mt-3">
             <AlertCircle size={12} className="shrink-0" /> {err}
           </div>
         )}
 
+        {/* Results */}
         {analysis && (
-          <div className="bg-amber-400/[0.04] border border-amber-400/15 rounded-lg p-3 space-y-1.5">
-            <div className="flex items-center gap-1.5 text-amber-400 text-[10px] font-bold uppercase tracking-wider">
-              <Activity size={10} /> AI Insights
+          <div className="mt-3 rounded-lg overflow-hidden" style={{ border: '1px solid rgba(251,191,36,0.15)' }}>
+            <div className="flex items-center gap-1.5 px-3 py-2" style={{ background: 'rgba(251,191,36,0.07)', borderBottom: '1px solid rgba(251,191,36,0.1)' }}>
+              <Activity size={10} className="text-amber-400" />
+              <span className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">AI Insights</span>
             </div>
-            <p className="text-white/60 text-xs leading-relaxed whitespace-pre-wrap">{analysis}</p>
+            <div className="p-3" style={{ background: 'rgba(0,0,0,0.25)' }}>
+              <p className="text-white/60 text-xs leading-relaxed whitespace-pre-wrap">{analysis}</p>
+            </div>
           </div>
         )}
       </div>
