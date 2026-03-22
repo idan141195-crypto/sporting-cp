@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Dashboard from './pages/Dashboard';
 import OnboardingPage from './pages/OnboardingPage';
-import { getUserConfig } from './lib/userConfig';
+import { getUserConfig, clearUserConfig } from './lib/userConfig';
 import './index.css';
 
 function App() {
@@ -25,7 +25,7 @@ function App() {
     );
   }
 
-  return <Dashboard />;
+  return <Dashboard onLogout={() => { clearUserConfig(); setView('onboarding'); }} />;
 }
 
 export default App;

@@ -118,5 +118,15 @@
     "budgetTo": null,
     "reason": "Meta API fetch failed: The request was made but no response was received",
     "mockStore": null
+  },
+  {
+    "timestamp": "2026-03-22T11:45:00.616Z",
+    "action": "ERROR",
+    "adSetName": "System",
+    "roas": null,
+    "budgetFrom": null,
+    "budgetTo": null,
+    "reason": "Meta API fetch failed: The request was made but no response was received",
+    "mockStore": null
   }
 ]

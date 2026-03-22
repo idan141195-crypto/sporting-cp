@@ -2,19 +2,19 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Settings, ExternalLink, TrendingUp,
   Activity, ChevronDown, ChevronUp,
-  X, Sparkles,
+  X, Sparkles, ArrowLeft, LogOut,
 } from 'lucide-react';
 import { AgentProvider, useAgentBus } from '../agents/AgentContext';
 import type { AgentMessage } from '../agents/types';
 import { NewCampaignConversation } from '../components/NewCampaignConversation';
-import { AICoachChat } from '../components/AICoachChat';
 import { BrandingSettings } from '../components/BrandingSettings';
 import { ConnectionMap } from '../components/ConnectionMap';
 import { MetaLiveFeed } from '../components/MetaLiveFeed';
 import { AICreativeSuite } from '../components/AICreativeSuite';
 import { ToastProvider } from '../components/Toast';
 import { useBrand } from '../lib/BrandingService';
-import { useSiteHealth } from '../lib/SiteHealthService';
+
+
 import type { CampaignPair } from '../components/CampaignView';
 
 // ─── Local types ───────────────────────────────────────────────────────────────
@@ -269,9 +269,9 @@ const AgentCarousel: React.FC<{ onOpen: (id: AgentCarouselId) => void }> = ({ on
               {/* CTA button */}
               <button style={{
                 width: '100%', padding: '12px 18px', borderRadius: 10,
-                border: `1px solid color-mix(in srgb, ${accent} ${isHov ? '60' : '30'}%, transparent)`,
-                background: isHov ? accent : `color-mix(in srgb, ${accent} 14%, transparent)`,
-                color: isHov ? '#000' : accent,
+                border: `1px solid color-mix(in srgb, ${accent} ${isHov ? '70' : '35'}%, transparent)`,
+                background: isHov ? accent : `color-mix(in srgb, ${accent} 18%, transparent)`,
+                color: isHov ? '#0d0d0d' : 'rgba(255,255,255,0.9)',
                 fontSize: 12, fontWeight: 800,
                 textTransform: 'uppercase', letterSpacing: '0.08em',
                 cursor: 'pointer',
@@ -333,7 +333,7 @@ const SidePanel: React.FC<{
 
 // ─── Settings panel ────────────────────────────────────────────────────────────
 
-const SettingsPanel: React.FC<{ isOpen: boolean; onClose: () => void; metaUrl: string }> = ({ isOpen, onClose, metaUrl }) => (
+const SettingsPanel: React.FC<{ isOpen: boolean; onClose: () => void; metaUrl: string; onLogout: () => void }> = ({ isOpen, onClose, metaUrl, onLogout }) => (
   <SidePanel isOpen={isOpen} onClose={onClose} title="Settings">
     <a
       href={metaUrl} target="_blank" rel="noopener noreferrer"
@@ -346,147 +346,23 @@ const SettingsPanel: React.FC<{ isOpen: boolean; onClose: () => void; metaUrl: s
       <ExternalLink size={13} />
     </a>
     <BrandingSettings />
+    <div className="mt-8 pt-6 border-t" style={{ borderColor: 'var(--brand-muted)' }}>
+      <button
+        onClick={onLogout}
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors text-xs font-bold uppercase tracking-widest"
+        style={{ border: '1px solid rgba(239,68,68,0.25)', color: '#ef4444', background: 'rgba(239,68,68,0.04)' }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.45)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.04)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(239,68,68,0.25)'; }}
+      >
+        <LogOut size={13} /> Disconnect &amp; Restart Setup
+      </button>
+    </div>
   </SidePanel>
 );
 
-// ─── Creative panel ────────────────────────────────────────────────────────────
+// ─── Page types ────────────────────────────────────────────────────────────────
 
-const CreativePanel: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => (
-  <SidePanel isOpen={isOpen} onClose={onClose} title="AI Creative Studio" accent="#a78bfa" width={660}>
-    <AICreativeSuite />
-  </SidePanel>
-);
-
-// ─── Chat panel (AI Assistant) ─────────────────────────────────────────────────
-
-const ChatPanel: React.FC<{ isOpen: boolean; onClose: () => void; dashboardContext: string }> = ({
-  isOpen, onClose, dashboardContext,
-}) => (
-  <SidePanel isOpen={isOpen} onClose={onClose} title="AI Assistant" accent="#06b6d4" width={520}>
-    <AICoachChat dashboardContext={dashboardContext} />
-  </SidePanel>
-);
-
-// ─── Analyst chat panel ────────────────────────────────────────────────────────
-
-const AnalystChatPanel: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
-  const { state, dispatch } = useAgentBus();
-  const conv      = state.conversations.analyst;
-  const isRunning = conv.status === 'THINKING' || conv.status === 'WORKING';
-  const [input, setInput] = useState('');
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const ACCENT = '#06b6d4';
-
-  useEffect(() => {
-    if (isOpen) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conv.messages, isOpen]);
-
-  const send = async () => {
-    const msg = input.trim();
-    if (!msg || isRunning) return;
-    setInput('');
-    await dispatch({ from: 'user', to: 'analyst', content: msg });
-  };
-
-  const messages = conv.messages.filter((m: AgentMessage) => m.from === 'user' || m.from === 'analyst');
-
-  return (
-    <SidePanel isOpen={isOpen} onClose={onClose} title="Zipit Analyst" accent={ACCENT} width={520} noScroll>
-
-      {/* Message list */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-        {messages.length === 0 && !isRunning && (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center" style={{ minHeight: 200 }}>
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ background: `${ACCENT}18`, border: `1px solid ${ACCENT}40` }}>
-              <Activity size={22} color={ACCENT} />
-            </div>
-            <p className="text-sm font-medium" style={{ color: '#9ca3af' }}>
-              No analysis yet. Ask anything or wait for the auto-run.
-            </p>
-          </div>
-        )}
-
-        {messages.map(m => {
-          const isUser = m.from === 'user';
-          return (
-            <div key={m.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-              <div style={{
-                maxWidth: '85%',
-                padding: '10px 14px',
-                borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-                background: isUser ? `${ACCENT}22` : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${isUser ? `${ACCENT}40` : 'rgba(255,255,255,0.07)'}`,
-                fontSize: 13,
-                lineHeight: 1.6,
-                color: isUser ? '#e2e8f0' : '#d1d5db',
-                whiteSpace: 'pre-wrap',
-              }}>
-                {m.content}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Thinking indicator */}
-        {isRunning && (
-          <div className="flex justify-start">
-            <div style={{
-              padding: '10px 14px', borderRadius: '12px 12px 12px 2px',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.07)',
-            }}>
-              <div className="flex gap-1">
-                {[0, 150, 300].map(d => (
-                  <span key={d} style={{
-                    width: 6, height: 6, borderRadius: '50%',
-                    background: ACCENT,
-                    display: 'inline-block',
-                    animation: `pulse 1.4s ease-in-out ${d}ms infinite`,
-                  }} />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Input */}
-      <div className="shrink-0 px-4 py-4 border-t" style={{ borderColor: 'var(--brand-muted)' }}>
-        <div className="flex gap-2">
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder="Ask the analyst anything…"
-            disabled={isRunning}
-            style={{
-              flex: 1, background: 'rgba(0,0,0,0.25)',
-              border: '1px solid var(--brand-muted)', borderRadius: 8,
-              color: '#fff', fontSize: 13, padding: '10px 14px',
-              outline: 'none', fontFamily: 'inherit',
-              opacity: isRunning ? .5 : 1,
-            }}
-          />
-          <button
-            onClick={send}
-            disabled={!input.trim() || isRunning}
-            style={{
-              padding: '10px 16px', borderRadius: 8,
-              border: 'none',
-              background: input.trim() && !isRunning ? ACCENT : 'rgba(6,182,212,0.15)',
-              color: input.trim() && !isRunning ? '#000' : '#374151',
-              fontSize: 12, fontWeight: 700, cursor: input.trim() && !isRunning ? 'pointer' : 'not-allowed',
-            }}
-          >
-            Send
-          </button>
-        </div>
-      </div>
-    </SidePanel>
-  );
-};
+type PageId = 'home' | 'analyst' | 'campaigner' | 'creative';
 
 
 // ─── Chief Agent (Orchestrator) chat panel ─────────────────────────────────────
@@ -643,21 +519,264 @@ const OrchestratorChatPanel: React.FC<{ isOpen: boolean; onClose: () => void }> 
   );
 };
 
+// ─── Page shell (shared wrapper) ──────────────────────────────────────────────
+
+const PageShell: React.FC<{
+  accent: string;
+  icon: React.ReactNode;
+  title: string;
+  tagline: string;
+  onBack: () => void;
+  children: React.ReactNode;
+}> = ({ accent, icon, title, tagline, onBack, children }) => (
+  <div>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 16,
+      padding: '20px 0 18px', marginBottom: 8,
+      borderBottom: '1px solid var(--brand-muted)',
+    }}>
+      <button
+        onClick={onBack}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '7px 14px', borderRadius: 8,
+          border: '1px solid var(--brand-muted)',
+          background: 'transparent', color: '#9ca3af',
+          fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+          letterSpacing: '0.08em', cursor: 'pointer',
+          transition: 'color 0.2s, border-color 0.2s',
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.25)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand-muted)'; }}
+      >
+        <ArrowLeft size={12} /> Back
+      </button>
+      <div style={{
+        width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: `color-mix(in srgb, ${accent} 14%, transparent)`,
+        border: `1px solid color-mix(in srgb, ${accent} 30%, transparent)`,
+      }}>
+        {icon}
+      </div>
+      <div>
+        <div style={{ color: '#fff', fontWeight: 900, fontSize: 20, fontFamily: 'var(--font-display)', lineHeight: 1.1 }}>
+          {title}
+        </div>
+        <div style={{ color: '#6b7280', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 3 }}>
+          {tagline}
+        </div>
+      </div>
+    </div>
+    <div style={{ paddingTop: 24 }}>{children}</div>
+  </div>
+);
+
+// ─── Analyst page ──────────────────────────────────────────────────────────────
+
+const AnalystPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const { state, dispatch } = useAgentBus();
+  const conv      = state.conversations.analyst;
+  const isRunning = conv.status === 'THINKING' || conv.status === 'WORKING';
+  const [input, setInput] = useState('');
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const ACCENT = '#06b6d4';
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [conv.messages]);
+
+  const send = async () => {
+    const msg = input.trim();
+    if (!msg || isRunning) return;
+    setInput('');
+    await dispatch({ from: 'user', to: 'analyst', content: msg });
+  };
+
+  const messages = conv.messages.filter((m: AgentMessage) => m.from === 'user' || m.from === 'analyst');
+
+  return (
+    <PageShell
+      accent={ACCENT}
+      icon={<Activity size={20} color={ACCENT} />}
+      title="Analyst"
+      tagline="Campaign Intelligence"
+      onBack={onBack}
+    >
+      <div style={{
+        background: 'rgba(0,0,0,0.2)',
+        border: '1px solid var(--brand-muted)',
+        borderRadius: 16,
+        display: 'flex', flexDirection: 'column',
+        height: 'calc(100vh - 280px)',
+        minHeight: 420,
+      }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {messages.length === 0 && !isRunning && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12, textAlign: 'center' }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: 16,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: `${ACCENT}18`, border: `1px solid ${ACCENT}40`,
+              }}>
+                <Activity size={26} color={ACCENT} />
+              </div>
+              <p style={{ color: '#9ca3af', fontSize: 13, lineHeight: 1.65, maxWidth: 340 }}>
+                Ask the Analyst about your campaigns — ROAS, spend efficiency, creative fatigue, or scaling opportunities.
+              </p>
+            </div>
+          )}
+          {messages.map(m => {
+            const isUser = m.from === 'user';
+            return (
+              <div key={m.id} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
+                <div style={{
+                  maxWidth: '75%', padding: '12px 16px',
+                  borderRadius: isUser ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
+                  background: isUser ? `${ACCENT}22` : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${isUser ? `${ACCENT}40` : 'rgba(255,255,255,0.07)'}`,
+                  fontSize: 13.5, lineHeight: 1.65, color: isUser ? '#e2e8f0' : '#d1d5db',
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {m.content}
+                </div>
+              </div>
+            );
+          })}
+          {isRunning && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <div style={{ padding: '12px 16px', borderRadius: '14px 14px 14px 2px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {[0, 150, 300].map(d => (
+                    <span key={d} style={{ width: 6, height: 6, borderRadius: '50%', background: ACCENT, display: 'inline-block', animation: `pulse 1.4s ease-in-out ${d}ms infinite` }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+        <div style={{ borderTop: '1px solid var(--brand-muted)', padding: '14px 16px', display: 'flex', gap: 8, flexShrink: 0 }}>
+          <input
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+            placeholder="Ask the analyst anything…"
+            disabled={isRunning}
+            style={{
+              flex: 1, background: 'rgba(0,0,0,0.3)',
+              border: '1px solid var(--brand-muted)', borderRadius: 10,
+              color: '#fff', fontSize: 13.5, padding: '11px 16px',
+              outline: 'none', fontFamily: 'inherit',
+              opacity: isRunning ? 0.5 : 1,
+            }}
+          />
+          <button
+            onClick={send}
+            disabled={!input.trim() || isRunning}
+            style={{
+              padding: '11px 22px', borderRadius: 10, border: 'none',
+              background: input.trim() && !isRunning ? ACCENT : `${ACCENT}22`,
+              color: input.trim() && !isRunning ? '#000' : '#374151',
+              fontSize: 12, fontWeight: 700, cursor: input.trim() && !isRunning ? 'pointer' : 'not-allowed',
+            }}
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    </PageShell>
+  );
+};
+
+// ─── Campaigner page ───────────────────────────────────────────────────────────
+
+const CampaignerPage: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const [panelOpen, setPanelOpen] = useState(true);
+  const ACCENT = 'var(--brand-primary)';
+
+  return (
+    <>
+      <PageShell
+        accent={ACCENT}
+        icon={<TrendingUp size={20} color={ACCENT} />}
+        title="Campaigner"
+        tagline="AI Ad Builder"
+        onBack={onBack}
+      >
+        <div style={{
+          background: 'rgba(0,0,0,0.2)',
+          border: '1px solid var(--brand-muted)', borderRadius: 16,
+          padding: '32px 36px',
+          transition: 'margin-right 0.3s',
+          marginRight: panelOpen ? 510 : 0,
+        }}>
+          <h2 style={{ color: '#fff', fontWeight: 900, fontSize: 22, fontFamily: 'var(--font-display)', marginBottom: 14 }}>
+            AI Campaign Builder
+          </h2>
+          <p style={{ color: '#9ca3af', fontSize: 13.5, lineHeight: 1.75, marginBottom: 28 }}>
+            Launch full Meta campaigns through natural conversation. Describe your audience and objective — the agent handles structure, targeting, and budgets via the live Meta Ads API.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
+            {[
+              { label: 'Natural language setup', desc: 'Tell the agent your product, audience, and goal in plain language' },
+              { label: 'Live Meta API connection', desc: 'Campaigns created in real-time directly in your ad account' },
+              { label: 'Budget & ad set management', desc: 'Automatic campaign structure, targeting, and daily budget configuration' },
+            ].map(({ label, desc }) => (
+              <div key={label} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: ACCENT, marginTop: 6, flexShrink: 0 }} />
+                <div>
+                  <div style={{ color: '#e2e8f0', fontSize: 13.5, fontWeight: 700 }}>{label}</div>
+                  <div style={{ color: '#6b7280', fontSize: 12.5, marginTop: 3, lineHeight: 1.5 }}>{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {!panelOpen && (
+            <button
+              onClick={() => setPanelOpen(true)}
+              style={{
+                padding: '12px 28px', borderRadius: 10,
+                border: `1px solid color-mix(in srgb, ${ACCENT} 40%, transparent)`,
+                background: `color-mix(in srgb, ${ACCENT} 15%, transparent)`,
+                color: '#fff', fontSize: 12, fontWeight: 800,
+                textTransform: 'uppercase', letterSpacing: '0.08em', cursor: 'pointer',
+              }}
+            >
+              Open Campaign Builder →
+            </button>
+          )}
+        </div>
+      </PageShell>
+      <NewCampaignConversation isOpen={panelOpen} onClose={() => setPanelOpen(false)} />
+    </>
+  );
+};
+
+// ─── Creative page ─────────────────────────────────────────────────────────────
+
+const CreativePage: React.FC<{ onBack: () => void }> = ({ onBack }) => (
+  <PageShell
+    accent="#a78bfa"
+    icon={<Sparkles size={20} color="#a78bfa" />}
+    title="AI Creative Studio"
+    tagline="Image · Video · Copy"
+    onBack={onBack}
+  >
+    <AICreativeSuite />
+  </PageShell>
+);
+
 // ─── Inner dashboard (needs ToastProvider) ─────────────────────────────────────
 
-const DashboardInner: React.FC = () => {
+const DashboardInner: React.FC<{ onLogout?: () => void }> = ({ onLogout = () => {} }) => {
   const brand = useBrand();
 
-  // ── Panel state ──────────────────────────────────────────────────────────────
-  const [settingsOpen,        setSettingsOpen]        = useState(false);
-  const [chatOpen,            setChatOpen]            = useState(false);
-  const [analystChatOpen,     setAnalystChatOpen]     = useState(false);
-  const [orchestratorOpen,    setOrchestratorOpen]    = useState(false);
-  const [devOpen,        setDevOpen]        = useState(false);
-  const [campaignPanelOpen, setCampaignPanelOpen] = useState(false);
-  const [creativeOpen,      setCreativeOpen]      = useState(false);
+  const [settingsOpen,     setSettingsOpen]     = useState(false);
+  const [orchestratorOpen, setOrchestratorOpen] = useState(false);
+  const [devOpen,          setDevOpen]          = useState(false);
+  const [currentPage,      setCurrentPage]      = useState<PageId>('home');
 
-  // ── Campaign polling ─────────────────────────────────────────────────────────
   const [statusData, setStatusData] = useState<StatusResponse | null>(null);
   const [isLive,     setIsLive]     = useState(false);
   const hasDataRef = useRef(false);
@@ -688,73 +807,47 @@ const DashboardInner: React.FC = () => {
     return () => clearInterval(iv);
   }, [fetchStatus]);
 
-  const pairs = statusData?.pairs ?? MOCK_PAIRS;
-
-  // ── Site health guard ────────────────────────────────────────────────────────
-  const health = useSiteHealth(pairs);
-
-  // ── Derived stats ────────────────────────────────────────────────────────────
-  const totalSpend = pairs.reduce((s, p) => s + (p.spend ?? 0), 0);
-  const roasPairs  = pairs.filter(p => p.roas !== null);
-  const avgRoas    = roasPairs.length ? roasPairs.reduce((s, p) => s + p.roas!, 0) / roasPairs.length : 0;
-  const wasteSaved = statusData?.totalWasteSavedUsd ?? 0;
-  const siteHealth = statusData?.siteHealth ?? 'OK';
-
-  const dashboardContext = JSON.stringify({
-    isLiveData: isLive, siteHealth,
-    healthStatus: health.latest?.overallStatus ?? 'Unknown',
-    campaigns: pairs.map(p => ({
-      name: p.adSetName, status: p.adSetStatus,
-      roas: p.roas, spend: p.spend, decision: p.liveDecision,
-    })),
-    summary: { totalSpend: totalSpend.toFixed(2), avgRoas: avgRoas.toFixed(2), wasteSaved: wasteSaved.toFixed(2) },
-  }, null, 2);
-
   const accountNum = (statusData?.accountId ?? '').replace('act_', '');
   const metaUrl    = accountNum
     ? `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${accountNum}`
     : 'https://adsmanager.facebook.com';
 
-  const navBtnStyle: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', gap: '6px',
-    padding: '6px 12px', borderRadius: 'var(--radius-size)',
+  const navBtn: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '6px 14px', borderRadius: 'var(--radius-size)',
     border: '1px solid var(--brand-muted)',
-    color: '#9ca3af', fontSize: '11px', fontWeight: 700,
+    color: '#9ca3af', fontSize: 11, fontWeight: 700,
     textTransform: 'uppercase', letterSpacing: '0.08em',
     cursor: 'pointer', background: 'transparent',
     transition: 'color 0.2s, border-color 0.2s',
   };
 
-  const navActive: React.CSSProperties = {
-    color: 'var(--brand-primary)',
-    borderColor: 'color-mix(in srgb, var(--brand-primary) 40%, transparent)',
-  };
-
-  const hover = {
-    enter: (e: React.MouseEvent) => {
-      (e.currentTarget as HTMLElement).style.color = 'var(--brand-primary)';
-      (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb, var(--brand-primary) 40%, transparent)';
-    },
-    leave: (e: React.MouseEvent, active: boolean) => {
-      if (!active) {
-        (e.currentTarget as HTMLElement).style.color = '#9ca3af';
-        (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand-muted)';
-      }
-    },
-  };
+  const pageActive = (color: string): React.CSSProperties => ({
+    color, borderColor: `color-mix(in srgb, ${color} 40%, transparent)`,
+  });
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--brand-surface)' }}>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header
-        className="sticky top-0 z-30 flex items-center justify-between px-6 py-3 border-b"
-        style={{ background: 'var(--brand-surface-card)', borderColor: 'var(--brand-muted)' }}
+        className="sticky top-0 z-30 flex items-center justify-between border-b"
+        style={{
+          background: 'var(--brand-surface-card)',
+          borderColor: 'var(--brand-muted)',
+          padding: '0 48px',
+          height: 64,
+        }}
       >
-        <div className="flex items-center gap-3">
+        {/* Logo — click → home */}
+        <button
+          onClick={() => setCurrentPage('home')}
+          className="flex items-center gap-3"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
           <img
             src={brand.logoUrl} alt={brand.name}
-            className="w-7 h-7 rounded object-contain"
+            className="w-8 h-8 rounded object-contain"
             style={{ background: `${brand.primary}18` }}
             onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
           />
@@ -767,47 +860,47 @@ const DashboardInner: React.FC = () => {
               DEMO
             </span>
           )}
-        </div>
+        </button>
 
         <nav className="flex items-center gap-2">
-          {/* Chief Agent — Orchestrator */}
+          {/* Chief Agent */}
           <button
-            onClick={() => { setOrchestratorOpen(o => !o); setSettingsOpen(false); setAnalystChatOpen(false); setCampaignPanelOpen(false); }}
-            style={{ ...navBtnStyle, ...(orchestratorOpen ? { color: '#a78bfa', borderColor: 'color-mix(in srgb,#a78bfa 40%,transparent)' } : {}) }}
+            onClick={() => { setOrchestratorOpen(o => !o); setSettingsOpen(false); }}
+            style={{ ...navBtn, ...(orchestratorOpen ? pageActive('#a78bfa') : {}) }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#a78bfa'; (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb,#a78bfa 40%,transparent)'; }}
             onMouseLeave={e => { if (!orchestratorOpen) { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand-muted)'; } }}>
             <Sparkles size={12} /> Chief Agent
           </button>
           {/* Analyst */}
           <button
-            onClick={() => { setAnalystChatOpen(o => !o); setOrchestratorOpen(false); setSettingsOpen(false); setCampaignPanelOpen(false); }}
-            style={{ ...navBtnStyle, ...(analystChatOpen ? { color: '#06b6d4', borderColor: 'color-mix(in srgb,#06b6d4 40%,transparent)' } : {}) }}
+            onClick={() => { setCurrentPage('analyst'); setOrchestratorOpen(false); setSettingsOpen(false); }}
+            style={{ ...navBtn, ...(currentPage === 'analyst' ? pageActive('#06b6d4') : {}) }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#06b6d4'; (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb,#06b6d4 40%,transparent)'; }}
-            onMouseLeave={e => { if (!analystChatOpen) { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand-muted)'; } }}>
+            onMouseLeave={e => { if (currentPage !== 'analyst') { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand-muted)'; } }}>
             <Activity size={12} /> Analyst
           </button>
           {/* Campaigner */}
           <button
-            onClick={() => { setCampaignPanelOpen(o => !o); setOrchestratorOpen(false); setAnalystChatOpen(false); setSettingsOpen(false); }}
-            style={{ ...navBtnStyle, ...(campaignPanelOpen ? navActive : {}) }}
-            onMouseEnter={hover.enter}
-            onMouseLeave={e => hover.leave(e, campaignPanelOpen)}>
+            onClick={() => { setCurrentPage('campaigner'); setOrchestratorOpen(false); setSettingsOpen(false); }}
+            style={{ ...navBtn, ...(currentPage === 'campaigner' ? pageActive('var(--brand-primary)') : {}) }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--brand-primary)'; (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb,var(--brand-primary) 40%,transparent)'; }}
+            onMouseLeave={e => { if (currentPage !== 'campaigner') { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand-muted)'; } }}>
             <TrendingUp size={12} /> Campaigner
           </button>
           {/* AI Creative */}
           <button
-            onClick={() => { setCreativeOpen(o => !o); setOrchestratorOpen(false); setAnalystChatOpen(false); setCampaignPanelOpen(false); setSettingsOpen(false); }}
-            style={{ ...navBtnStyle, ...(creativeOpen ? { color: '#a78bfa', borderColor: 'color-mix(in srgb,#a78bfa 40%,transparent)' } : {}) }}
+            onClick={() => { setCurrentPage('creative'); setOrchestratorOpen(false); setSettingsOpen(false); }}
+            style={{ ...navBtn, ...(currentPage === 'creative' ? pageActive('#a78bfa') : {}) }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#a78bfa'; (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb,#a78bfa 40%,transparent)'; }}
-            onMouseLeave={e => { if (!creativeOpen) { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand-muted)'; } }}>
+            onMouseLeave={e => { if (currentPage !== 'creative') { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand-muted)'; } }}>
             <Sparkles size={12} /> AI Creative
           </button>
           {/* Settings */}
           <button
-            onClick={() => { setSettingsOpen(o => !o); setOrchestratorOpen(false); setAnalystChatOpen(false); setCampaignPanelOpen(false); }}
-            style={{ ...navBtnStyle, ...(settingsOpen ? navActive : {}) }}
-            onMouseEnter={hover.enter}
-            onMouseLeave={e => hover.leave(e, settingsOpen)}>
+            onClick={() => { setSettingsOpen(o => !o); setOrchestratorOpen(false); }}
+            style={{ ...navBtn, ...(settingsOpen ? pageActive('var(--brand-primary)') : {}) }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--brand-primary)'; (e.currentTarget as HTMLElement).style.borderColor = 'color-mix(in srgb,var(--brand-primary) 40%,transparent)'; }}
+            onMouseLeave={e => { if (!settingsOpen) { (e.currentTarget as HTMLElement).style.color = '#9ca3af'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--brand-muted)'; } }}>
             <Settings size={12} /> Settings
           </button>
         </nav>
@@ -816,27 +909,12 @@ const DashboardInner: React.FC = () => {
       {/* ── Main ────────────────────────────────────────────────────────────── */}
       <main
         className="max-w-screen-xl mx-auto px-6 py-8 transition-all duration-300"
-        style={(settingsOpen || campaignPanelOpen || creativeOpen) ? { marginRight: '680px' } : {}}
+        style={(settingsOpen || orchestratorOpen) ? { marginRight: 560 } : {}}
       >
-        <AgentCarousel onOpen={(id) => {
-          setOrchestratorOpen(false);
-          setSettingsOpen(false);
-          if (id === 'analyst') {
-            setAnalystChatOpen(true);
-            setCampaignPanelOpen(false);
-            setCreativeOpen(false);
-          } else if (id === 'campaigner') {
-            setCampaignPanelOpen(true);
-            setAnalystChatOpen(false);
-            setCreativeOpen(false);
-          } else {
-            setAnalystChatOpen(false);
-            setCampaignPanelOpen(false);
-            setCreativeOpen(true);
-          }
-        }} />
-
-
+        {currentPage === 'home'       && <AgentCarousel onOpen={id => setCurrentPage(id)} />}
+        {currentPage === 'analyst'    && <AnalystPage    onBack={() => setCurrentPage('home')} />}
+        {currentPage === 'campaigner' && <CampaignerPage onBack={() => setCurrentPage('home')} />}
+        {currentPage === 'creative'   && <CreativePage   onBack={() => setCurrentPage('home')} />}
       </main>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
@@ -862,21 +940,12 @@ const DashboardInner: React.FC = () => {
         )}
       </footer>
 
-      {/* ── Panels ──────────────────────────────────────────────────────────── */}
-      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} metaUrl={metaUrl} />
-      <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} dashboardContext={dashboardContext} />
-      <AnalystChatPanel isOpen={analystChatOpen} onClose={() => setAnalystChatOpen(false)} />
+      {/* ── Side panels ─────────────────────────────────────────────────────── */}
+      <SettingsPanel isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} metaUrl={metaUrl} onLogout={onLogout} />
       <OrchestratorChatPanel isOpen={orchestratorOpen} onClose={() => setOrchestratorOpen(false)} />
-      <CreativePanel isOpen={creativeOpen} onClose={() => setCreativeOpen(false)} />
-
-      <NewCampaignConversation
-        isOpen={campaignPanelOpen}
-        onClose={() => setCampaignPanelOpen(false)}
-      />
-
-      {(settingsOpen || chatOpen || analystChatOpen || orchestratorOpen || creativeOpen) && (
+      {(settingsOpen || orchestratorOpen) && (
         <div className="fixed inset-0 z-30" style={{ background: 'rgba(0,0,0,0.3)' }}
-          onClick={() => { setSettingsOpen(false); setChatOpen(false); setAnalystChatOpen(false); setOrchestratorOpen(false); setCreativeOpen(false); }} />
+          onClick={() => { setSettingsOpen(false); setOrchestratorOpen(false); }} />
       )}
     </div>
   );
@@ -884,10 +953,10 @@ const DashboardInner: React.FC = () => {
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────────
 
-const Dashboard: React.FC = () => (
+const Dashboard: React.FC<{ onLogout?: () => void }> = ({ onLogout }) => (
   <ToastProvider>
     <AgentProvider>
-      <DashboardInner />
+      <DashboardInner onLogout={onLogout} />
     </AgentProvider>
   </ToastProvider>
 );
